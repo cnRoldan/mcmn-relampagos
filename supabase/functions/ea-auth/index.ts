@@ -20,16 +20,23 @@ Deno.serve(async(req:Request)=>{
   if(quota.error)return reply({error:'El acceso no está disponible. Inténtalo más tarde.'},503);
   if(!quota.data)return reply({error:'Demasiados intentos. Espera diez minutos e inténtalo otra vez.'},429);
   if(body.action==='signup'){
-   const email=typeof body.email==='string'?body.email.trim().toLowerCase():'';
-   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||password.length<10)return reply({error:'Usa un correo válido y una contraseña de al menos 10 caracteres.'},400);
-   const {data,error}=await auth.auth.signUp({email,password,options:{data:{ea_id:ea},emailRedirectTo:"https://mcm-torneos-relampago.netlify.app/"}});
-   if(error)return reply({error:error.status===429?'Espera unos minutos antes de volver a solicitar el alta.':'No se ha podido crear la cuenta. Comprueba los datos o utiliza otro ID de EA.'},error.status===429?429:400);
-   return reply({session:data.session?{access_token:data.session.access_token,refresh_token:data.session.refresh_token}:null,message:'Comprueba tu correo y confirma la cuenta. Después podrás entrar con tu ID de EA.'});
+   if(password.length<10)return reply({error:'Utiliza una contraseña de al menos 10 caracteres.'},400);
+   // Supabase Auth uses an internal email-shaped identifier for username-only
+   // accounts. This .invalid address is never used for correspondence and
+   // does not claim to verify ownership of a real email address or EA account.
+   const identityHash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ea.toLowerCase()));
+   const identity=Array.from(new Uint8Array(identityHash),v=>v.toString(16).padStart(2,'0')).join('');
+   const email=`ea-${identity}@accounts.mcm.invalid`;
+   const created=await admin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{ea_id:ea}});
+   if(created.error)return reply({error:'No se ha podido crear la cuenta. El ID de EA puede estar ya registrado.'},400);
+   const {data,error}=await auth.auth.signInWithPassword({email,password});
+   if(error||!data.session)return reply({message:'Cuenta creada. Ya puedes entrar con tu ID de EA y contraseña.'});
+   return reply({session:{access_token:data.session.access_token,refresh_token:data.session.refresh_token},message:'Cuenta de capitán creada.'});
   }
   const lookup=await admin.rpc('auth_email_for_ea',{p_ea_id:ea});
   if(lookup.error)return reply({error:'El acceso no está disponible. Inténtalo más tarde.'},503);
   const {data,error}=await auth.auth.signInWithPassword({email:lookup.data||'unknown-account@mcm.invalid',password});
-  if(error||!data.session||!lookup.data)return reply({error:'ID de EA o contraseña incorrectos, o correo pendiente de confirmar.'},401);
+  if(error||!data.session||!lookup.data)return reply({error:'ID de EA o contraseña incorrectos.'},401);
   return reply({session:{access_token:data.session.access_token,refresh_token:data.session.refresh_token}});
  }catch{return reply({error:'No se ha podido completar el acceso.'},400)}
 });

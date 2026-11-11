@@ -10,7 +10,7 @@ type Auth = {
   profile: Profile | null;
   error: string;
   signIn: (ea: string, password: string) => Promise<void>;
-  signUp: (ea: string, email: string, password: string) => Promise<string>;
+  signUp: (ea: string, password: string) => Promise<string>;
   signOut: () => Promise<void>;
   reloadProfile: () => Promise<void>;
 };
@@ -117,11 +117,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase!.auth.setSession(data.session);
       if (error) throw new Error("No se pudo guardar la sesión.");
     },
-    signUp: async (ea, email, password) => {
+    signUp: async (ea, password) => {
       const data = await authRequest({
         action: "signup",
         ea_id: ea.trim(),
-        email: email.trim(),
         password,
       });
       if (data.session) {
@@ -130,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return (
         data.message ||
-        "Cuenta creada. Comprueba tu correo para confirmar el acceso."
+        "Cuenta creada. Ya puedes entrar con tu ID de EA y contraseña."
       );
     },
     signOut: async () => {

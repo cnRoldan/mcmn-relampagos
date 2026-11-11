@@ -9,7 +9,6 @@ export function AuthScreen() {
   const { configured, signIn, signUp, error: authError } = useAuth(),
     [signup, setSignup] = useState(false),
     [ea, setEa] = useState(""),
-    [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [repeat, setRepeat] = useState(""),
     [busy, setBusy] = useState(false),
@@ -36,16 +35,6 @@ export function AuthScreen() {
             maxLength={40}
             autoCapitalize="none"
           />
-          {signup && (
-            <Field
-              label="Correo de recuperación"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="tu@correo.com"
-              maxLength={254}
-              email
-            />
-          )}
           <Field
             label="Contraseña"
             value={password}
@@ -65,8 +54,8 @@ export function AuthScreen() {
           )}
           {signup && (
             <Text style={s.subtitle}>
-              El correo permite confirmar y recuperar tu cuenta. Para iniciar
-              sesión utilizarás tu ID de EA.
+              Esta cuenta y su contraseña pertenecen a MCM. Tu ID de EA
+              identifica al capitán.
             </Text>
           )}
           {!!(error || authError) && (
@@ -96,7 +85,8 @@ export function AuthScreen() {
               setBusy(true);
               try {
                 if (signup) {
-                  setNotice(await signUp(ea, email, password));
+                  setNotice(await signUp(ea, password));
+                  setSignup(false);
                   setPassword("");
                   setRepeat("");
                 } else await signIn(ea, password);

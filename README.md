@@ -12,8 +12,8 @@ Paleta vinotinto centralizada en `src/theme.ts`. Logo original MCM, sin recortes
 
 Proyecto Supabase independiente: `mkbvplehrbjrufhkcqun`, en la organización elegida por el propietario. No se han copiado cuentas, contraseñas, clubes ni datos de ConvoSquad.
 
-- Acceso con ID de EA y contraseña. Al crear cuenta se pide correo para confirmación y futura recuperación; no se publica.
-- Las contraseñas las gestiona Supabase Auth. `ea-auth` resuelve el ID de EA a correo exclusivamente en servidor y limita los intentos por identificador.
+- Acceso con ID de EA y contraseña. El alta solo pide ese identificador y una contraseña nueva de MCM; no solicita ni envía correos.
+- Las contraseñas las gestiona Supabase Auth. `ea-auth` utiliza un identificador interno sin correspondencia real para Supabase Auth y limita los intentos por ID de EA.
 - Cada cuenta nueva es capitán. El rol de administrador se concede desde el servidor tras identificar al propietario; no basta con escribir un nombre o modificar metadatos.
 - Un capitán crea un club, gestiona hasta tres contactos opcionales y lo inscribe en las noches abiertas.
 - Si el club fue añadido manualmente, un administrador vincula su capitán por ID de EA.
@@ -41,7 +41,7 @@ npx expo export --platform all --max-workers 2
 npm run build:web
 ```
 
-`tests/database.test.mjs` aplica el SQL real a PostgreSQL aislado con PGlite y prueba RLS, roles, privacidad, duplicados, numeración, cierre y rollback. Los flujos visuales se revisan con API simulada; esto no equivale a comprobar un acceso válido real ni a probar dispositivos físicos. Ver `supabase/README.md` para despliegue y configuración de Auth.
+`tests/database.test.mjs` aplica el SQL real a PostgreSQL aislado con PGlite y prueba RLS, roles, privacidad, duplicados, numeración, cierre y rollback. Los flujos visuales se revisan con API simulada; esto no equivale a comprobar un acceso válido real ni a probar dispositivos físicos. Ver `supabase/README.md` para despliegue y detalles de Auth.
 
 ## Publicación
 
