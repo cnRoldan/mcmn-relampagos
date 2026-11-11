@@ -20,7 +20,7 @@ Deno.serve(async(req:Request)=>{
   if(quota.error)return reply({error:'El acceso no está disponible. Inténtalo más tarde.'},503);
   if(!quota.data)return reply({error:'Demasiados intentos. Espera diez minutos e inténtalo otra vez.'},429);
   if(body.action==='signup'){
-   if(password.length<10)return reply({error:'Utiliza una contraseña de al menos 10 caracteres.'},400);
+   if(password.length<8)return reply({error:'Utiliza una contraseña de al menos 8 caracteres.'},400);
    // Supabase Auth uses an internal email-shaped identifier for username-only
    // accounts. This .invalid address is never used for correspondence and
    // does not claim to verify ownership of a real email address or EA account.

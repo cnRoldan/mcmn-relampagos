@@ -39,7 +39,7 @@ export function AuthScreen() {
             label="Contraseña"
             value={password}
             onChangeText={setPassword}
-            placeholder={signup ? "Mínimo 10 caracteres" : "Tu contraseña"}
+            placeholder={signup ? "Mínimo 8 caracteres" : "Tu contraseña"}
             maxLength={128}
             secure
           />
@@ -76,9 +76,9 @@ export function AuthScreen() {
                 );
                 return;
               }
-              if (signup && (password.length < 10 || password !== repeat)) {
+              if (signup && (password.length < 8 || password !== repeat)) {
                 setError(
-                  "La contraseña debe tener al menos 10 caracteres y coincidir.",
+                  "La contraseña debe tener al menos 8 caracteres y coincidir.",
                 );
                 return;
               }
