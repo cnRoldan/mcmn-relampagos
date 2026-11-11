@@ -42,3 +42,6 @@ yarn-error.*
 
 web-preview/
 artifacts/
+
+# Netlify local site link
+.netlify/

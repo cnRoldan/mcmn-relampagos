@@ -40,3 +40,16 @@ Esta versión no tiene servidor, autenticación ni sincronización entre disposi
 Pendiente: admisión y vínculo de capitanes/clubes, roles, privacidad de contactos, cupos/bajas/reservas, puntos/desempates, confirmación de resultados y horarios por partido. No se asumen las decisiones pendientes del documento de traspaso.
 
 El prototipo de Sites permanece en `/workspace/sites/relampagos` como referencia del flujo. Esta app es un proyecto independiente en `/workspace/relampagos`.
+
+## Vista compartida en Netlify
+
+La app móvil se exporta a web desde el mismo código para revisar diseño y flujos juntos. `netlify.toml` establece la compilación `npm run build:web`, salida `dist`, fallback SPA y caché para bundles con hash. Netlify aloja esta vista; no genera APK ni compilaciones iOS y no añade sincronización de datos.
+
+```sh
+npm ci
+npm run build:web
+npx netlify-cli login
+npx netlify-cli deploy --prod --dir dist --no-build
+```
+
+El primer despliegue requiere iniciar sesión y crear o vincular un sitio en una cuenta Netlify. La vinculación local `.netlify/` está excluida de Git. No guardar tokens en el repositorio.
