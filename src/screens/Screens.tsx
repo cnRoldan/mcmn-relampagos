@@ -452,7 +452,7 @@ export function Tournaments() {
     nav = useNavigation<DrawerNavigationProp<Routes>>(),
     [planning, setPlanning] = useState(false),
     [counts, setCounts] = useState<Record<Size, number>>({ 4: 0, 6: 0, 8: 0 }),
-    [method, setMethod] = useState<"random" | "order" | "manual" | null>(null),
+    [method, setMethod] = useState<"random" | "order" | "manual" | null>("random"),
     [draft, setDraft] = useState<Tournament[] | null>(null),
     [err, setErr] = useState(""),
     [busy, setBusy] = useState(false),
@@ -508,7 +508,7 @@ export function Tournaments() {
                   disabled={!night.clubs.length}
                   onPress={() => {
                     setCounts({ 4: 0, 6: 0, 8: 0 });
-                    setMethod(null);
+                    setMethod("random");
                     setDraft(null);
                     setErr("");
                     setPlanning(true);

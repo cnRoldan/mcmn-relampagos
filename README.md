@@ -23,7 +23,7 @@ npx expo export --platform all
 
 - Noches independientes, creación y selección.
 - Clubes sin jugadores ni plantillas, contactos opcionales ficticios (máximo tres) y control de duplicados por noche.
-- Reparto explícito en torneos de 4, 6 u 8, por sorteo, orden o selección manual. Revisión antes de confirmar; todos los clubes deben aparecer una vez.
+- Reparto explícito en torneos de 4, 6 u 8, por sorteo aleatorio (predeterminado confirmado por el usuario), orden o selección manual. Revisión antes de confirmar; todos los clubes deben aparecer una vez.
 - Enfrentamientos de liga, cruces y máximo de cinco partidos por equipo.
 - Persistencia local mediante AsyncStorage; las escrituras se serializan y se comprueban antes de actualizar la interfaz. Los errores de lectura no sobrescriben datos automáticamente.
 
