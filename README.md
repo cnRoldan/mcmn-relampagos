@@ -23,6 +23,10 @@ npx expo export --platform all
 
 Menú lateral: Inicio, Torneos, Mi Club, Palmarés y Ajustes. Torneos agrupa Noches, Inscritos y Relámpagos. Mi Club y Palmarés muestran estados iniciales hasta implementar vinculación de cuentas y campeones confirmados.
 
+## Logo
+
+Logo original MCM Torneos Relámpago, incorporado en el menú e Inicio mediante `BrandLogo`. Se conserva la imagen sin recortes ni modificaciones, con fondo negro y acento violeta. El icono cuadrado sigue siendo provisional.
+
 ## Identidad visual
 
 Paleta vinotinto: borgoña profundo `#4A1025`, principal `#7A1F3D`, rosa suave `#F3BCCB` y marfil `#FAF6F4`. Colores semánticos centralizados en `src/theme.ts`; se aplican al menú, botones, tarjetas, formularios e iconos de la app.

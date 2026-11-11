@@ -20,6 +20,7 @@ import {
   Honours,
   Settings,
 } from "./src/screens/Screens";
+import { BrandLogo } from "./src/components/BrandLogo";
 import { colors } from "./src/theme";
 import type { Routes } from "./src/navigation";
 const Drawer = createDrawerNavigator<Routes>();
@@ -29,20 +30,8 @@ function SideMenu(props: DrawerContentComponentProps) {
       {...props}
       contentContainerStyle={{ flexGrow: 1, paddingTop: 45 }}
     >
-      <View style={{ padding: 22, marginBottom: 25 }}>
-        <Text style={{ fontSize: 28, fontWeight: "900", color: colors.accent }}>
-          ϟ RELÁMPAGOS
-        </Text>
-        <Text
-          style={{
-            fontSize: 10,
-            letterSpacing: 3,
-            color: colors.onDark,
-            marginTop: 8,
-          }}
-        >
-          CLUBES PRO
-        </Text>
+      <View style={{ padding: 18, marginBottom: 25 }}>
+        <BrandLogo />
       </View>
       <Text
         style={{

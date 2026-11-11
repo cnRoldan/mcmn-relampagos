@@ -13,6 +13,7 @@ import {
   Sheet,
   Confirm,
 } from "../components/UI";
+import { BrandLogo } from "../components/BrandLogo";
 import { colors, styles as s } from "../theme";
 import { format, roundRobin, Size, Tournament } from "../domain/tournaments";
 import type { RouteProp } from "@react-navigation/native";
@@ -67,6 +68,7 @@ export function Home() {
           },
         ]}
       >
+        <BrandLogo />
         <Text style={[s.eyebrow, { color: colors.accent }]}>
           UNA NOCHE · TODO EN JUEGO
         </Text>
