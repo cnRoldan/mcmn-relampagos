@@ -1,5 +1,12 @@
 export type Size = 4 | 6 | 8;
-export type Club = { id: string; name: string; contacts: string[] };
+export type Club = {
+  id: string;
+  name: string;
+  contacts: string[];
+  registrationOrder?: number;
+  registeredAt?: string;
+  captainId?: string | null;
+};
 export type Tournament = { id: string; size: Size; clubIds: string[] };
 export type Night = {
   id: string;

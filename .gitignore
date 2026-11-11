@@ -45,3 +45,5 @@ artifacts/
 
 # Netlify local site link
 .netlify/
+
+.env

@@ -83,6 +83,9 @@ export function Field({
   onChangeText,
   placeholder = "",
   numeric = false,
+  secure = false,
+  email = false,
+  autoCapitalize,
   maxLength = 70,
 }: {
   label: string;
@@ -90,6 +93,9 @@ export function Field({
   onChangeText: (v: string) => void;
   placeholder?: string;
   numeric?: boolean;
+  secure?: boolean;
+  email?: boolean;
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
   maxLength?: number;
 }) {
   return (
@@ -102,9 +108,15 @@ export function Field({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={colors.placeholder}
-        keyboardType={numeric ? "number-pad" : "default"}
+        keyboardType={
+          email ? "email-address" : numeric ? "number-pad" : "default"
+        }
+        secureTextEntry={secure}
+        autoCorrect={!(secure || email || autoCapitalize === "none")}
         maxLength={maxLength}
-        autoCapitalize={numeric ? "none" : "sentences"}
+        autoCapitalize={
+          autoCapitalize ?? (numeric || secure || email ? "none" : "sentences")
+        }
       />
     </View>
   );

@@ -1,10 +1,7 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { C, Context } from "./context";
+import { CloudProvider } from "./CloudProvider";
+import { cloudConfigured } from "../cloud/client";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Crypto from "expo-crypto";
 import {
@@ -18,21 +15,7 @@ import {
   validatePlan,
 } from "../domain/tournaments";
 const KEY = "@relampagos/mobile/v1";
-type Context = {
-  data: Data;
-  night: Night | undefined;
-  ready: boolean;
-  error: string;
-  createNight: (name: string, date: string, time: string) => Promise<void>;
-  select: (id: string) => Promise<void>;
-  addClub: (name: string, contacts: string[]) => Promise<void>;
-  removeClub: (id: string) => Promise<void>;
-  confirmPlan: (plan: Tournament[]) => Promise<void>;
-  loadDemo: () => Promise<void>;
-  reset: () => Promise<void>;
-};
-const C = createContext<Context | null>(null);
-export function Provider({ children }: { children: React.ReactNode }) {
+function LocalProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<Data>(emptyData),
     [ready, setReady] = useState(false),
     [error, setError] = useState("");
@@ -81,6 +64,22 @@ export function Provider({ children }: { children: React.ReactNode }) {
     });
   }
   const value: Context = {
+    mode: "local",
+    isAdmin: true,
+    myClub: undefined,
+    refresh: async () => {},
+    saveMyClub: async () => {
+      throw new Error("Conecta el servidor para vincular tu club.");
+    },
+    updateContacts: async () => {
+      throw new Error("Conecta el servidor.");
+    },
+    registerMyClub: async () => {
+      throw new Error("Conecta el servidor.");
+    },
+    assignCaptain: async () => {
+      throw new Error("Conecta el servidor.");
+    },
     data,
     night: data.nights.find((n) => n.id === data.activeId),
     ready,
@@ -164,4 +163,12 @@ export function useApp() {
   const c = useContext(C);
   if (!c) throw new Error("Provider no disponible");
   return c;
+}
+
+export function Provider({ children }: { children: React.ReactNode }) {
+  return cloudConfigured ? (
+    <CloudProvider>{children}</CloudProvider>
+  ) : (
+    <LocalProvider>{children}</LocalProvider>
+  );
 }

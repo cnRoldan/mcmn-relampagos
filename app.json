@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Rel\u00e1mpagos",
+    "name": "Relámpagos",
     "slug": "relampagos",
     "version": "0.1.0",
     "orientation": "default",
@@ -21,6 +21,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "relampagos"
+    "scheme": "relampagos",
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

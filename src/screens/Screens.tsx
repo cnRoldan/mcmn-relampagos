@@ -3,6 +3,7 @@ import { Text, View, Pressable, ActivityIndicator } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import * as Crypto from "expo-crypto";
+import { useAuth } from "../cloud/AuthProvider";
 import { useApp } from "../state/AppState";
 import {
   Button,
@@ -27,10 +28,27 @@ const showDate = (d: string) =>
     new Date(d + "T12:00:00"),
   );
 function Status() {
-  const { ready, error } = useApp();
+  const { ready, error, mode, refresh } = useApp();
+  const [updating, setUpdating] = useState(false);
   return (
     <>
-      {!ready && <ActivityIndicator color={colors.dark} />}{" "}
+      {!ready && <ActivityIndicator color={colors.dark} />}
+      {mode === "cloud" && (
+        <Button
+          label={updating ? "Actualizando…" : "Actualizar"}
+          secondary
+          disabled={updating}
+          onPress={async () => {
+            setUpdating(true);
+            try {
+              await refresh();
+            } catch {
+            } finally {
+              setUpdating(false);
+            }
+          }}
+        />
+      )}{" "}
       {!!error && (
         <Text accessibilityRole="alert" style={s.error}>
           {error}
@@ -40,15 +58,17 @@ function Status() {
   );
 }
 function LocalNote() {
+  const { mode } = useApp();
   return (
     <Note>
-      Versión inicial · Datos guardados solo en este dispositivo. La
-      sincronización y las cuentas de capitanes están pendientes.
+      {mode === "cloud"
+        ? "Inscripciones por orden de llegada, confirmado en servidor. Los contactos solo son visibles para su capitán y los administradores."
+        : "Versión de prueba · Datos guardados solo en este dispositivo."}
     </Note>
   );
 }
 export function Home() {
-  const { night, loadDemo, ready, error } = useApp(),
+  const { night, loadDemo, ready, error, mode, isAdmin } = useApp(),
     nav = useNavigation<DrawerNavigationProp<Routes>>(),
     [busy, setBusy] = useState(false),
     [err, setErr] = useState("");
@@ -97,7 +117,13 @@ export function Home() {
           </Badge>
         )}
         <Button
-          label={night ? "Gestionar la noche →" : "Crear mi primera noche →"}
+          label={
+            night
+              ? "Ver la noche →"
+              : isAdmin
+                ? "Crear mi primera noche →"
+                : "Ver torneos →"
+          }
           accent
           onPress={() => nav.navigate("Torneos", { section: "Noches" })}
         />
@@ -160,7 +186,7 @@ export function Home() {
           <Text style={s.text}>›</Text>
         </Pressable>
       ))}
-      {!night && (
+      {!night && mode === "local" && (
         <>
           <Button
             label={busy ? "Cargando…" : "Explorar con 8 clubes de ejemplo"}
@@ -185,7 +211,7 @@ export function Home() {
   );
 }
 export function Nights() {
-  const { data, night, createNight, select, ready, error } = useApp(),
+  const { data, night, createNight, select, ready, error, isAdmin } = useApp(),
     [open, setOpen] = useState(false),
     [name, setName] = useState(""),
     [date, setDate] = useState(new Date().toISOString().slice(0, 10)),
@@ -198,20 +224,28 @@ export function Nights() {
       subtitle="Una lista de inscritos puede dar lugar a varios relámpagos independientes."
     >
       <Status />
-      <Button
-        label="＋ Nueva noche"
-        disabled={!ready || !!error}
-        onPress={() => {
-          setName("");
-          setErr("");
-          setOpen(true);
-        }}
-      />
+      {isAdmin && (
+        <Button
+          label="＋ Nueva noche"
+          disabled={!ready || !!error}
+          onPress={() => {
+            setName("");
+            setErr("");
+            setOpen(true);
+          }}
+        />
+      )}
       {data.nights.length === 0 ? (
         <View style={s.card}>
-          <Text style={s.heading}>Prepara la primera noche</Text>
+          <Text style={s.heading}>
+            {isAdmin
+              ? "Prepara la primera noche"
+              : "Próximamente, nuevas noches"}
+          </Text>
           <Text style={s.subtitle}>
-            Dale un nombre, una fecha y una hora de inicio.
+            {isAdmin
+              ? "Dale un nombre, una fecha y una hora de inicio."
+              : "El organizador publicará aquí las próximas inscripciones."}
           </Text>
         </View>
       ) : (
@@ -301,13 +335,24 @@ export function Nights() {
   );
 }
 export function Clubs() {
-  const { night, addClub, removeClub } = useApp(),
+  const {
+      night,
+      addClub,
+      removeClub,
+      isAdmin,
+      mode,
+      myClub,
+      registerMyClub,
+      assignCaptain,
+    } = useApp(),
     nav = useNavigation<DrawerNavigationProp<Routes>>(),
     [open, setOpen] = useState(false),
     [name, setName] = useState(""),
     [contacts, setContacts] = useState(["", "", ""]),
     [err, setErr] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [linkClub, setLinkClub] = useState<string | null>(null),
+    [captainEa, setCaptainEa] = useState("");
   return (
     <Page
       title="Clubes inscritos"
@@ -323,7 +368,7 @@ export function Clubs() {
         />
       ) : (
         <>
-          {!night.tournaments.length ? (
+          {!night.tournaments.length && isAdmin ? (
             <Button
               label="＋ Añadir club"
               onPress={() => {
@@ -333,11 +378,38 @@ export function Clubs() {
                 setOpen(true);
               }}
             />
+          ) : night.tournaments.length ? (
+            <Note>Inscripción cerrada: el reparto ya está confirmado.</Note>
+          ) : myClub ? (
+            <Button
+              label={
+                night.clubs.some((c) => c.id === myClub.id)
+                  ? "Tu club ya está inscrito"
+                  : "Inscribir mi club"
+              }
+              disabled={busy || night.clubs.some((c) => c.id === myClub.id)}
+              onPress={async () => {
+                setBusy(true);
+                setErr("");
+                try {
+                  await registerMyClub();
+                } catch (e) {
+                  setErr(message(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            />
           ) : (
-            <Note>
-              Inscripción cerrada: el reparto ya está confirmado. La gestión de
-              bajas posteriores está pendiente de definir.
-            </Note>
+            <Button
+              label="Crear o vincular mi club"
+              onPress={() => nav.navigate("Mi Club")}
+            />
+          )}
+          {!!err && !open && (
+            <Text accessibilityRole="alert" style={s.error}>
+              {err}
+            </Text>
           )}
           {!night.clubs.length && (
             <View style={s.card}>
@@ -373,11 +445,30 @@ export function Clubs() {
                     {c.name}
                   </Text>
                   <Text style={s.subtitle}>
-                    Inscrito #{i + 1} · {c.contacts.length} contactos locales
+                    Inscrito #{c.registrationOrder ?? i + 1}
+                    {c.registeredAt
+                      ? ` · ${new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" }).format(new Date(c.registeredAt))}`
+                      : ""}
                   </Text>
                 </View>
               </View>
-              {!night.tournaments.length && (
+              {c.contacts.map((phone, index) => (
+                <Text key={index} style={s.text}>
+                  {phone}
+                </Text>
+              ))}
+              {mode === "cloud" && isAdmin && !c.captainId && (
+                <Button
+                  secondary
+                  label="Vincular capitán"
+                  onPress={() => {
+                    setLinkClub(c.id);
+                    setCaptainEa("");
+                    setErr("");
+                  }}
+                />
+              )}
+              {isAdmin && !night.tournaments.length && (
                 <Confirm
                   label="Retirar de esta noche"
                   title="Retirar club"
@@ -389,9 +480,9 @@ export function Clubs() {
             </View>
           ))}
           <Note>
-            Inscripción administrativa en esta versión. Los contactos son
-            opcionales para probar el flujo: utiliza datos ficticios hasta
-            disponer de permisos y almacenamiento seguro en servidor.
+            {mode === "cloud"
+              ? "La lista respeta el número asignado al confirmar cada inscripción. El sorteo posterior no altera el orden de llegada."
+              : "Los contactos de prueba se guardan solo en este dispositivo."}
           </Note>
         </>
       )}
@@ -405,7 +496,9 @@ export function Clubs() {
             maxLength={50}
           />
           <Note>
-            No introduzcas teléfonos reales en esta versión de prueba.
+            {mode === "cloud"
+              ? "Hasta tres contactos opcionales. Solo el capitán y los administradores pueden verlos."
+              : "Utiliza contactos ficticios en la prueba local."}
           </Note>
           {contacts.map((c, i) => (
             <Field
@@ -441,6 +534,39 @@ export function Clubs() {
           />
         </Sheet>
       )}
+      {linkClub && (
+        <Sheet
+          title="Vincular capitán"
+          onClose={() => !busy && setLinkClub(null)}
+        >
+          <Field
+            label="ID de EA del capitán"
+            value={captainEa}
+            onChangeText={setCaptainEa}
+            maxLength={40}
+            autoCapitalize="none"
+          />
+          <Note>
+            El capitán debe tener una cuenta y no pertenecer ya a otro club.
+          </Note>
+          {!!err && <Text style={s.error}>{err}</Text>}
+          <Button
+            label={busy ? "Guardando…" : "Vincular"}
+            disabled={busy}
+            onPress={async () => {
+              setBusy(true);
+              try {
+                await assignCaptain(linkClub, captainEa);
+                setLinkClub(null);
+              } catch (e) {
+                setErr(message(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+        </Sheet>
+      )}
     </Page>
   );
 }
@@ -458,7 +584,7 @@ function shuffled(ids: string[]) {
   return a;
 }
 export function Tournaments() {
-  const { night, confirmPlan } = useApp(),
+  const { night, confirmPlan, isAdmin } = useApp(),
     nav = useNavigation<DrawerNavigationProp<Routes>>(),
     [planning, setPlanning] = useState(false),
     [counts, setCounts] = useState<Record<Size, number>>({ 4: 0, 6: 0, 8: 0 }),
@@ -518,17 +644,25 @@ export function Tournaments() {
                   {night.clubs.length} clubes inscritos. Elige cuántos torneos
                   quieres y revisa los participantes antes de confirmar.
                 </Text>
-                <Button
-                  label="Preparar reparto"
-                  disabled={!night.clubs.length}
-                  onPress={() => {
-                    setCounts({ 4: 0, 6: 0, 8: 0 });
-                    setMethod("random");
-                    setDraft(null);
-                    setErr("");
-                    setPlanning(true);
-                  }}
-                />
+                {isAdmin && (
+                  <Button
+                    label="Preparar reparto"
+                    disabled={!night.clubs.length}
+                    onPress={() => {
+                      setCounts({ 4: 0, 6: 0, 8: 0 });
+                      setMethod("random");
+                      setDraft(null);
+                      setErr("");
+                      setPlanning(true);
+                    }}
+                  />
+                )}
+                {!isAdmin && (
+                  <Text style={s.subtitle}>
+                    El organizador preparará el reparto después de cerrar la
+                    inscripción.
+                  </Text>
+                )}
               </View>
               {sizes.map((size) => (
                 <View style={s.card} key={size}>
@@ -800,38 +934,59 @@ export function Tournaments() {
   );
 }
 export function Settings() {
-  const { reset } = useApp();
+  const { mode, reset } = useApp(),
+    { profile, signOut, error, reloadProfile } = useAuth();
   return (
-    <Page title="Ajustes" subtitle="Relámpagos · nombre provisional">
+    <Page title="Ajustes" subtitle="MCM · Torneos Relámpago">
       <View style={s.card}>
-        <Text style={s.heading}>Una app para tu comunidad</Text>
-        <Text style={s.text}>
-          iOS y Android con React Native y Expo. Menú lateral adaptable a móvil
-          y tablet.
+        <Text style={s.heading}>
+          {profile ? profile.ea_id : "Una app para tu comunidad"}
         </Text>
         <Text style={s.subtitle}>
-          Versión 0.1.0 · Panel inicial del organizador.
+          {profile?.role === "admin"
+            ? "Administrador de la comunidad"
+            : mode === "cloud"
+              ? "Capitán de club"
+              : "Versión de prueba local"}
+        </Text>
+        <Text style={s.text}>
+          iOS y Android con menú lateral adaptable a móvil y tablet.
         </Text>
       </View>
       <LocalNote />
+      {mode === "cloud" ? (
+        <>
+          {!!error && <Text style={s.error}>{error}</Text>}
+          <Button
+            label="Actualizar mi perfil"
+            secondary
+            onPress={() => {
+              void reloadProfile().catch(() => {});
+            }}
+          />
+          <Confirm
+            label="Cerrar sesión"
+            title="Cerrar sesión"
+            message="Se cerrará tu sesión en este dispositivo. Tu club e inscripciones seguirán guardados en el servidor."
+            onConfirm={signOut}
+          />
+        </>
+      ) : (
+        <Confirm
+          label="Borrar datos de prueba de este dispositivo"
+          title="Borrar datos locales"
+          message="Se eliminarán las noches y los clubes de prueba guardados en este dispositivo."
+          danger
+          onConfirm={reset}
+        />
+      )}
       <View style={s.card}>
-        <Text style={s.heading}>Siguientes decisiones</Text>
-        <Text style={s.text}>
-          Admisión de clubes y cuentas de capitanes. Visibilidad de contactos.
-          Marcadores, puntos y desempates. Cupos, reservas y bajas.
-        </Text>
+        <Text style={s.heading}>Próximos pasos</Text>
         <Text style={s.subtitle}>
-          La administración real y la protección de datos se comprobarán en el
-          servidor cuando se incorpore la base de datos compartida.
+          Resultados, puntos, desempates, cupos y gestión de bajas después del
+          cierre.
         </Text>
       </View>
-      <Confirm
-        label="Borrar datos de prueba de este dispositivo"
-        title="Borrar datos locales"
-        message="Se eliminarán todas las noches, clubes y repartos guardados en este dispositivo. Esta acción no se puede deshacer."
-        danger
-        onConfirm={reset}
-      />
     </Page>
   );
 }
@@ -890,24 +1045,175 @@ export function TournamentHub() {
   );
 }
 export function MyClub() {
+  const { mode, myClub, saveMyClub, updateContacts, night, registerMyClub } =
+    useApp();
+  const { profile } = useAuth();
   const nav = useNavigation<DrawerNavigationProp<Routes>>();
+  const [editing, setEditing] = useState(false),
+    [name, setName] = useState(""),
+    [contacts, setContacts] = useState(["", "", ""]),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const registered = !!myClub && !!night?.clubs.some((c) => c.id === myClub.id);
   return (
-    <Page title="Mi Club" subtitle="Tu equipo dentro de la comunidad.">
-      <View style={s.card}>
-        <Text style={s.heading}>Todavía no hay un club vinculado</Text>
-        <Text style={s.subtitle}>
-          Aquí podrás consultar el club asociado a tu cuenta cuando se habilite
-          el acceso de capitanes.
+    <Page
+      title="Mi Club"
+      subtitle={
+        profile
+          ? `Capitán · ${profile.ea_id}`
+          : "Tu equipo dentro de la comunidad."
+      }
+    >
+      <Status />
+      {mode === "local" ? (
+        <Note>
+          La vinculación de tu club se activará al conectar el servidor. Esta
+          vista sigue en modo de prueba local.
+        </Note>
+      ) : myClub ? (
+        <>
+          <View style={s.card}>
+            <Badge>TU CLUB</Badge>
+            <Text style={s.heading}>{myClub.name}</Text>
+            <Text style={s.subtitle}>
+              Contactos privados · visibles para ti y para los administradores.
+            </Text>
+            {myClub.contacts.length ? (
+              myClub.contacts.map((phone, i) => (
+                <Text style={s.text} key={i}>
+                  {phone}
+                </Text>
+              ))
+            ) : (
+              <Text style={s.subtitle}>Sin contactos añadidos.</Text>
+            )}
+            <Button
+              secondary
+              label="Editar contactos"
+              onPress={() => {
+                setContacts([0, 1, 2].map((i) => myClub.contacts[i] || ""));
+                setError("");
+                setEditing(true);
+              }}
+            />
+          </View>
+          {night ? (
+            <View style={s.card}>
+              <Text style={s.heading}>{night.name}</Text>
+              <Text style={s.subtitle}>
+                {registered
+                  ? `Tu club está inscrito con el número #${night.clubs.find((c) => c.id === myClub.id)?.registrationOrder}.`
+                  : night.tournaments.length
+                    ? "Las inscripciones están cerradas."
+                    : "Inscripción por orden de llegada. Tu puesto se asigna al confirmar en el servidor."}
+              </Text>
+              <Button
+                label={registered ? "Club inscrito" : "Inscribir a mi club"}
+                disabled={registered || !!night.tournaments.length || busy}
+                onPress={async () => {
+                  setBusy(true);
+                  setError("");
+                  try {
+                    await registerMyClub();
+                  } catch (e) {
+                    setError(message(e));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              />
+              <Button
+                secondary
+                label="Elegir otra noche"
+                onPress={() => nav.navigate("Torneos", { section: "Noches" })}
+              />
+            </View>
+          ) : (
+            <Button
+              label="Ver las próximas noches"
+              onPress={() => nav.navigate("Torneos", { section: "Noches" })}
+            />
+          )}
+        </>
+      ) : (
+        <View style={s.card}>
+          <Text style={s.heading}>Añade el club que representas</Text>
+          <Text style={s.subtitle}>
+            Solo necesitas su nombre. No hay jugadores ni plantillas que
+            registrar.
+          </Text>
+          <Button
+            label="Crear mi club"
+            onPress={() => {
+              setName("");
+              setContacts(["", "", ""]);
+              setError("");
+              setEditing(true);
+            }}
+          />
+          <Note>
+            Si un administrador ya inscribió tu club, pídele que lo vincule a tu
+            ID de EA para conservar sus inscripciones.
+          </Note>
+        </View>
+      )}
+      {!!error && !editing && (
+        <Text accessibilityRole="alert" style={s.error}>
+          {error}
         </Text>
-      </View>
-      <Note>
-        La vinculación entre cuentas y clubes está pendiente de definir. Los
-        clubes inscritos en una noche se gestionan desde Torneos.
-      </Note>
-      <Button
-        label="Ver clubes inscritos"
-        onPress={() => nav.navigate("Torneos", { section: "Inscritos" })}
-      />
+      )}
+      {editing && (
+        <Sheet
+          title={myClub ? "Contactos de mi club" : "Crear mi club"}
+          onClose={() => !busy && setEditing(false)}
+        >
+          {!myClub && (
+            <Field
+              label="Nombre del club"
+              value={name}
+              onChangeText={setName}
+              maxLength={50}
+            />
+          )}
+          <Note>
+            Hasta tres teléfonos opcionales. No se publican en la lista de
+            inscritos.
+          </Note>
+          {contacts.map((v, i) => (
+            <Field
+              key={i}
+              label={`Contacto ${i + 1} · opcional`}
+              value={v}
+              onChangeText={(v) =>
+                setContacts((a) => a.map((x, j) => (i === j ? v : x)))
+              }
+              maxLength={24}
+            />
+          ))}
+          {!!error && (
+            <Text accessibilityRole="alert" style={s.error}>
+              {error}
+            </Text>
+          )}
+          <Button
+            label={busy ? "Guardando…" : "Guardar"}
+            disabled={busy}
+            onPress={async () => {
+              setBusy(true);
+              setError("");
+              try {
+                if (myClub) await updateContacts(contacts);
+                else await saveMyClub(name, contacts);
+                setEditing(false);
+              } catch (e) {
+                setError(message(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+        </Sheet>
+      )}
     </Page>
   );
 }
