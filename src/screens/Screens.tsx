@@ -66,7 +66,7 @@ export function Home() {
           },
         ]}
       >
-        <Text style={[s.eyebrow, { color: colors.lime }]}>
+        <Text style={[s.eyebrow, { color: colors.accent }]}>
           UNA NOCHE · TODO EN JUEGO
         </Text>
         <Text
@@ -79,7 +79,7 @@ export function Home() {
         >
           {night ? night.name : "POCO TIEMPO.\nMUCHO FÚTBOL."}
         </Text>
-        <Text style={{ fontSize: 14, lineHeight: 23, color: "#A8BAA6" }}>
+        <Text style={{ fontSize: 14, lineHeight: 23, color: colors.onDark }}>
           {night
             ? `${showDate(night.date)} · ${night.time} h · Madrid`
             : "Prepara los relámpagos de tu comunidad de Clubes Pro."}
@@ -139,7 +139,7 @@ export function Home() {
             { flexDirection: "row", gap: 15, alignItems: "center" },
           ]}
         >
-          <Text style={{ color: "#678548", fontSize: 22, fontWeight: "800" }}>
+          <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "800" }}>
             {num}
           </Text>
           <View style={{ flex: 1, gap: 5 }}>
@@ -343,12 +343,12 @@ export function Clubs() {
               <View style={s.row}>
                 <View
                   style={{
-                    backgroundColor: "#EAF0E0",
+                    backgroundColor: colors.soft,
                     borderRadius: 10,
                     padding: 13,
                   }}
                 >
-                  <Text style={{ fontWeight: "800", color: "#56733E" }}>
+                  <Text style={{ fontWeight: "800", color: colors.softInk }}>
                     {c.name.slice(0, 2).toUpperCase()}
                   </Text>
                 </View>

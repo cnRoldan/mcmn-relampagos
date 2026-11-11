@@ -1,13 +1,20 @@
 import { StyleSheet } from "react-native";
 export const colors = {
-  bg: "#F4F5EF",
-  ink: "#17291E",
-  dark: "#14231B",
-  lime: "#C5F26C",
-  muted: "#6D7C6C",
-  line: "#DFE6D8",
+  bg: "#FAF6F4",
+  ink: "#341D26",
+  dark: "#4A1025",
+  primary: "#7A1F3D",
+  accent: "#F3BCCB",
+  muted: "#806972",
+  line: "#E8D7DB",
   white: "#FFFFFF",
-  danger: "#A44031",
+  danger: "#A52C42",
+  soft: "#F4E6E9",
+  softInk: "#6B213B",
+  onDark: "#D8B7C1",
+  onDarkMuted: "#CBA3AF",
+  selected: "#71283F",
+  placeholder: "#8B707A",
 };
 export const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.bg },
@@ -51,7 +58,7 @@ export const styles = StyleSheet.create({
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   badge: {
     alignSelf: "flex-start",
-    backgroundColor: "#EAF3DC",
+    backgroundColor: colors.soft,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -59,11 +66,11 @@ export const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: "800",
-    color: "#4B672A",
+    color: colors.softInk,
     letterSpacing: 0.5,
   },
-  note: { backgroundColor: "#E9EFDF", padding: 14, borderRadius: 10 },
-  noteText: { fontSize: 12, lineHeight: 19, color: "#526148" },
+  note: { backgroundColor: colors.soft, padding: 14, borderRadius: 10 },
+  noteText: { fontSize: 12, lineHeight: 19, color: colors.softInk },
   label: {
     fontSize: 13,
     fontWeight: "600",

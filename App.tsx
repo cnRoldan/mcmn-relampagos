@@ -30,14 +30,14 @@ function SideMenu(props: DrawerContentComponentProps) {
       contentContainerStyle={{ flexGrow: 1, paddingTop: 45 }}
     >
       <View style={{ padding: 22, marginBottom: 25 }}>
-        <Text style={{ fontSize: 28, fontWeight: "900", color: colors.lime }}>
+        <Text style={{ fontSize: 28, fontWeight: "900", color: colors.accent }}>
           ϟ RELÁMPAGOS
         </Text>
         <Text
           style={{
             fontSize: 10,
             letterSpacing: 3,
-            color: "#A1B29E",
+            color: colors.onDark,
             marginTop: 8,
           }}
         >
@@ -48,7 +48,7 @@ function SideMenu(props: DrawerContentComponentProps) {
         style={{
           fontSize: 10,
           letterSpacing: 2,
-          color: "#85977E",
+          color: colors.onDarkMuted,
           paddingHorizontal: 25,
           marginBottom: 18,
         }}
@@ -57,10 +57,10 @@ function SideMenu(props: DrawerContentComponentProps) {
       </Text>
       <DrawerItemList {...props} />
       <View style={{ marginTop: "auto", padding: 25, gap: 8 }}>
-        <Text style={{ color: colors.lime, fontSize: 12 }}>
+        <Text style={{ color: colors.accent, fontSize: 12 }}>
           ● Panel del organizador
         </Text>
-        <Text style={{ color: "#8A9D85", fontSize: 11, lineHeight: 17 }}>
+        <Text style={{ color: colors.onDarkMuted, fontSize: 11, lineHeight: 17 }}>
           Versión inicial · datos locales{`\n`}Nombre provisional
         </Text>
       </View>
@@ -89,9 +89,9 @@ export default function App() {
               screenOptions={{
                 drawerType: width >= 900 ? "permanent" : "front",
                 drawerStyle: { width: 280, backgroundColor: colors.dark },
-                drawerActiveBackgroundColor: "#2B3E27",
-                drawerActiveTintColor: colors.lime,
-                drawerInactiveTintColor: "#BAC8B4",
+                drawerActiveBackgroundColor: colors.selected,
+                drawerActiveTintColor: colors.accent,
+                drawerInactiveTintColor: colors.onDark,
                 drawerLabelStyle: { fontSize: 14, fontWeight: "600" },
                 drawerItemStyle: { borderRadius: 10, marginHorizontal: 13 },
                 headerStyle: { backgroundColor: colors.bg },

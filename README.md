@@ -19,6 +19,10 @@ npx expo export --platform all
 
 `eas.json` prepara perfiles de APK de pruebas, simulador iOS y producción. Antes de compilar hay que vincular un proyecto EAS propio, decidir los identificadores de paquete/bundle y configurar la firma. No se han creado recursos de Apple/Google ni se han reutilizado credenciales de ConvoSquad.
 
+## Identidad visual
+
+Paleta vinotinto: borgoña profundo `#4A1025`, principal `#7A1F3D`, rosa suave `#F3BCCB` y marfil `#FAF6F4`. Colores semánticos centralizados en `src/theme.ts`; se aplican al menú, botones, tarjetas, formularios e iconos de la app.
+
 ## Alcance de la versión 0.1
 
 - Noches independientes, creación y selección.

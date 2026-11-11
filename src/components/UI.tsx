@@ -40,12 +40,12 @@ export function Button({
         borderWidth: 1,
         borderColor: secondary ? colors.line : "transparent",
         backgroundColor: accent
-          ? colors.lime
+          ? colors.accent
           : secondary
             ? "transparent"
             : danger
               ? colors.danger
-              : colors.dark,
+              : colors.primary,
         justifyContent: "center",
         opacity: disabled ? 0.4 : pressed ? 0.7 : 1,
       })}
@@ -101,7 +101,7 @@ export function Field({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#8B9786"
+        placeholderTextColor={colors.placeholder}
         keyboardType={numeric ? "number-pad" : "default"}
         maxLength={maxLength}
         autoCapitalize={numeric ? "none" : "sentences"}
