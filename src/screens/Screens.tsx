@@ -16,7 +16,18 @@ import {
 } from "../components/UI";
 import { BrandLogo } from "../components/BrandLogo";
 import { colors, styles as s } from "../theme";
-import { format, roundRobin, Size, Tournament } from "../domain/tournaments";
+import {
+  format,
+  Size,
+  Tournament,
+  CompetitionFormat,
+  defaultFormat,
+  supportedFormats,
+  maxMatches,
+  suggestSplit,
+  competitionPhases,
+  validatePlan,
+} from "../domain/tournaments";
 import type { RouteProp } from "@react-navigation/native";
 import type { Routes, TournamentSection } from "../navigation";
 const message = (e: unknown) =>
@@ -583,30 +594,67 @@ function shuffled(ids: string[]) {
   }
   return a;
 }
+function FormatSelector({
+  size,
+  value,
+  onChange,
+}: {
+  size: Size;
+  value: CompetitionFormat;
+  onChange: (kind: CompetitionFormat) => void;
+}) {
+  return (
+    <View style={s.wrap}>
+      {supportedFormats(size).map((kind) => (
+        <Button
+          key={kind}
+          label={`${value === kind ? "●" : "○"} ${kind === "copa" ? "Copa" : "Liga"}`}
+          secondary={value !== kind}
+          onPress={() => onChange(kind)}
+        />
+      ))}
+    </View>
+  );
+}
 export function Tournaments() {
   const { night, confirmPlan, isAdmin } = useApp(),
-    nav = useNavigation<DrawerNavigationProp<Routes>>(),
-    [planning, setPlanning] = useState(false),
+    nav = useNavigation<DrawerNavigationProp<Routes>>();
+  const [planning, setPlanning] = useState(false),
     [counts, setCounts] = useState<Record<Size, number>>({ 4: 0, 6: 0, 8: 0 }),
-    [method, setMethod] = useState<"random" | "order" | "manual" | null>(
-      "random",
-    ),
+    [kinds, setKinds] = useState<Record<Size, CompetitionFormat>>({
+      4: "copa",
+      6: "liga",
+      8: "copa",
+    }),
+    [method, setMethod] = useState<"random" | "order" | "manual">("random"),
     [draft, setDraft] = useState<Tournament[] | null>(null),
     [err, setErr] = useState(""),
     [busy, setBusy] = useState(false),
     [detail, setDetail] = useState<Tournament | null>(null);
   const sizes: Size[] = [4, 6, 8];
+  function openPlanner() {
+    if (!night || !isAdmin) return;
+    const split = suggestSplit(night.clubs.length),
+      next = { 4: 0, 6: 0, 8: 0 };
+    split?.forEach((size) => next[size]++);
+    setCounts(next);
+    setKinds({ 4: "copa", 6: "liga", 8: "copa" });
+    setMethod("random");
+    setDraft(null);
+    setErr(
+      split
+        ? ""
+        : "Con esta cantidad no hay un reparto completo disponible. Revisa las inscripciones; no se excluirá ningún club automáticamente.",
+    );
+    setPlanning(true);
+  }
   function prepare() {
-    if (!night) return;
+    if (!night || !isAdmin) return;
     const ss = sizes.flatMap(
       (size) => Array(counts[size]).fill(size) as Size[],
     );
     if (!ss.length || ss.reduce((a, b) => a + b, 0) !== night.clubs.length) {
       setErr(`Los cupos deben sumar exactamente ${night.clubs.length} clubes.`);
-      return;
-    }
-    if (!method) {
-      setErr("Elige cómo repartir los clubes.");
       return;
     }
     const ids =
@@ -618,6 +666,7 @@ export function Tournaments() {
       ss.map((size) => ({
         id: Crypto.randomUUID(),
         size,
+        format: kinds[size],
         clubIds: ids.slice(offset, (offset += size)),
       })),
     );
@@ -625,8 +674,10 @@ export function Tournaments() {
   }
   return (
     <Page
-      title="Relámpagos"
-      subtitle={night ? night.name : "Cada torneo, su propio campeón."}
+      title="Torneos relámpago"
+      subtitle={
+        night ? night.name : "Copa o Liga, organizadas por los administradores."
+      }
     >
       <Status />
       {!night ? (
@@ -634,132 +685,150 @@ export function Tournaments() {
           label="Ir a Noches"
           onPress={() => nav.navigate("Torneos", { section: "Noches" })}
         />
+      ) : !night.tournaments.length ? (
+        <>
+          <View style={s.card}>
+            <Text style={s.heading}>Copa o Liga</Text>
+            <Text style={s.subtitle}>
+              {night.clubs.length} clubes inscritos. La configuración se prepara
+              según los participantes, manteniendo un máximo de cinco partidos
+              por equipo.
+            </Text>
+            {isAdmin ? (
+              <Button
+                label="Preparar reparto"
+                disabled={!night.clubs.length}
+                onPress={openPlanner}
+              />
+            ) : (
+              <Text style={s.subtitle}>
+                El administrador elegirá los formatos y revisará el reparto
+                antes de confirmarlo.
+              </Text>
+            )}
+          </View>
+          <View style={s.card}>
+            <Badge>COPA</Badge>
+            <Text style={s.heading}>Grupos y eliminatorias</Text>
+            <Text style={s.subtitle}>
+              4 equipos: grupo único y final. 8 equipos: dos grupos de cuatro,
+              semifinales cruzadas y final.
+            </Text>
+          </View>
+          <View style={s.card}>
+            <Badge>LIGA</Badge>
+            <Text style={s.heading}>Todos contra todos</Text>
+            <Text style={s.subtitle}>
+              Una vuelta, sin final adicional. Con 4 equipos se juegan 3
+              partidos; con 6, se juegan 5. Una Liga de 8 superaría el límite.
+            </Text>
+          </View>
+        </>
       ) : (
         <>
-          {!night.tournaments.length ? (
-            <>
-              <View style={s.card}>
-                <Text style={s.heading}>De la lista a la competición</Text>
-                <Text style={s.subtitle}>
-                  {night.clubs.length} clubes inscritos. Elige cuántos torneos
-                  quieres y revisa los participantes antes de confirmar.
-                </Text>
-                {isAdmin && (
-                  <Button
-                    label="Preparar reparto"
-                    disabled={!night.clubs.length}
-                    onPress={() => {
-                      setCounts({ 4: 0, 6: 0, 8: 0 });
-                      setMethod("random");
-                      setDraft(null);
-                      setErr("");
-                      setPlanning(true);
+          {night.tournaments.map((t, i) => (
+            <View style={s.card} key={t.id}>
+              <Badge>
+                {(t.format ?? defaultFormat(t.size)) === "copa"
+                  ? "COPA"
+                  : "LIGA"}{" "}
+                · {t.size} EQUIPOS · MÁX. {maxMatches(t.size, t.format)}{" "}
+                PARTIDOS
+              </Badge>
+              <Text style={s.heading}>Relámpago {i + 1}</Text>
+              <Text style={s.subtitle}>{format(t.size, t.format)}</Text>
+              <View style={s.wrap}>
+                {t.clubIds.map((id) => (
+                  <View
+                    key={id}
+                    style={{
+                      backgroundColor: colors.bg,
+                      padding: 9,
+                      borderRadius: 6,
                     }}
-                  />
-                )}
-                {!isAdmin && (
-                  <Text style={s.subtitle}>
-                    El organizador preparará el reparto después de cerrar la
-                    inscripción.
-                  </Text>
-                )}
-              </View>
-              {sizes.map((size) => (
-                <View style={s.card} key={size}>
-                  <Badge>
-                    {size} EQUIPOS · MÁX. {size === 4 ? 4 : 5} PARTIDOS
-                  </Badge>
-                  <Text style={s.heading}>{format(size)}</Text>
-                  <Text style={s.subtitle}>
-                    {size === 4
-                      ? "Tres partidos por equipo. Final entre primero y segundo."
-                      : size === 6
-                        ? "Cinco partidos por equipo. El primero de la tabla es campeón."
-                        : "Tres partidos de grupos. Semifinales cruzadas y final."}
-                  </Text>
-                </View>
-              ))}
-            </>
-          ) : (
-            <>
-              {night.tournaments.map((t, i) => (
-                <View style={s.card} key={t.id}>
-                  <Badge>
-                    {t.size} EQUIPOS · MÁX. {t.size === 4 ? 4 : 5} PARTIDOS
-                  </Badge>
-                  <Text style={s.heading}>Relámpago {i + 1}</Text>
-                  <Text style={s.subtitle}>{format(t.size)}</Text>
-                  <View style={s.wrap}>
-                    {t.clubIds.map((id) => (
-                      <View
-                        key={id}
-                        style={{
-                          backgroundColor: colors.bg,
-                          padding: 9,
-                          borderRadius: 6,
-                        }}
-                      >
-                        <Text style={{ fontSize: 12, color: colors.ink }}>
-                          {night.clubs.find((c) => c.id === id)?.name}
-                        </Text>
-                      </View>
-                    ))}
+                  >
+                    <Text style={{ fontSize: 12, color: colors.ink }}>
+                      {night.clubs.find((c) => c.id === id)?.name}
+                    </Text>
                   </View>
-                  <Button
-                    secondary
-                    label="Ver enfrentamientos →"
-                    onPress={() => setDetail(t)}
-                  />
-                </View>
-              ))}
-              <Note>
-                Marcadores, puntos, desempates y permisos para comunicar
-                resultados están pendientes de definir.
-              </Note>
-            </>
-          )}
+                ))}
+              </View>
+              <Button
+                secondary
+                label="Ver enfrentamientos →"
+                onPress={() => setDetail(t)}
+              />
+            </View>
+          ))}
+          <Note>
+            Los marcadores, puntos y desempates se definirán antes de
+            automatizar las clasificaciones y los campeones.
+          </Note>
         </>
       )}
       {planning && night && (
         <Sheet
-          title={draft ? "Revisar reparto" : "Preparar reparto"}
+          title={draft ? "Revisar torneos" : "Configurar relámpagos"}
           onClose={() => !busy && setPlanning(false)}
         >
           {!draft ? (
             <>
               <Text style={s.subtitle}>
-                {night.clubs.length} clubes. Elige la combinación de torneos.
+                {night.clubs.length} clubes inscritos. Esta propuesta usa
+                torneos completos; puedes ajustar las cantidades y elegir Copa o
+                Liga donde ambos formatos sean compatibles.
               </Text>
+              <Note>
+                Propuesta actual:{" "}
+                {sizes
+                  .filter((size) => counts[size] > 0)
+                  .map(
+                    (size) =>
+                      `${counts[size]} ${kinds[size] === "copa" ? "Copa(s)" : "Liga(s)"} de ${size}`,
+                  )
+                  .join(" · ") || "Sin torneos"}
+                . Plazas:{" "}
+                {sizes.reduce((total, size) => total + counts[size] * size, 0)}/
+                {night.clubs.length}.
+              </Note>
               {sizes.map((size) => (
-                <View style={[s.card, s.row]} key={size}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.heading}>{size} equipos</Text>
-                    <Text style={s.subtitle}>
-                      Hasta {size === 4 ? 4 : 5} partidos
+                <View style={s.card} key={size}>
+                  <View style={s.row}>
+                    <Text style={[s.heading, { flex: 1 }]}>{size} equipos</Text>
+                    <Button
+                      label="−"
+                      secondary
+                      disabled={!counts[size]}
+                      onPress={() =>
+                        setCounts((c) => ({ ...c, [size]: c[size] - 1 }))
+                      }
+                    />
+                    <Text
+                      accessibilityLabel={`${counts[size]} torneos de ${size} equipos`}
+                      style={s.heading}
+                    >
+                      {counts[size]}
                     </Text>
+                    <Button
+                      label="＋"
+                      secondary
+                      disabled={counts[size] >= 50}
+                      onPress={() =>
+                        setCounts((c) => ({ ...c, [size]: c[size] + 1 }))
+                      }
+                    />
                   </View>
-                  <Button
-                    label="−"
-                    disabled={!counts[size]}
-                    secondary
-                    onPress={() =>
-                      setCounts((c) => ({ ...c, [size]: c[size] - 1 }))
+                  <FormatSelector
+                    size={size}
+                    value={kinds[size]}
+                    onChange={(kind) =>
+                      setKinds((k) => ({ ...k, [size]: kind }))
                     }
                   />
-                  <Text
-                    accessibilityLabel={`${counts[size]} torneos de ${size} equipos`}
-                    style={s.heading}
-                  >
-                    {counts[size]}
+                  <Text style={s.subtitle}>
+                    {format(size, kinds[size])} · Máximo{" "}
+                    {maxMatches(size, kinds[size])} partidos por equipo.
                   </Text>
-                  <Button
-                    label="＋"
-                    secondary
-                    disabled={counts[size] >= 50}
-                    onPress={() =>
-                      setCounts((c) => ({ ...c, [size]: c[size] + 1 }))
-                    }
-                  />
                 </View>
               ))}
               <Text style={s.label}>Método de reparto</Text>
@@ -778,8 +847,9 @@ export function Tournaments() {
                 />
               ))}
               <Note>
-                Los cupos deben coincidir con la lista completa. No se excluyen
-                clubes ni se crean formatos para impares automáticamente.
+                El sorteo reparte los clubes entre torneos. La lista de
+                inscritos conserva siempre su orden de llegada. Los cupos deben
+                incluir a todos los participantes.
               </Note>
               {!!err && (
                 <Text accessibilityRole="alert" style={s.error}>
@@ -791,47 +861,60 @@ export function Tournaments() {
           ) : (
             <>
               <Text style={s.subtitle}>
-                Revisa los clubes de cada torneo. Al confirmar se cierra la
-                inscripción en esta versión.
+                Revisa los formatos y los clubes antes de confirmar. La
+                confirmación cierra las inscripciones de esta sesión.
               </Text>
-              {method === "manual"
-                ? night.clubs.map((c) => (
-                    <View style={s.card} key={c.id}>
-                      <Text style={s.heading}>{c.name}</Text>
-                      <View style={s.wrap}>
-                        {draft.map((t, i) => (
-                          <Button
-                            key={t.id}
-                            label={`R${i + 1} · ${t.size} plazas`}
-                            secondary={!t.clubIds.includes(c.id)}
-                            onPress={() =>
-                              setDraft((a) =>
-                                a!.map((x, j) => ({
-                                  ...x,
-                                  clubIds:
-                                    j === i
-                                      ? [
-                                          ...x.clubIds.filter(
-                                            (id) => id !== c.id,
-                                          ),
-                                          c.id,
-                                        ]
-                                      : x.clubIds.filter((id) => id !== c.id),
-                                })),
-                              )
-                            }
-                          />
-                        ))}
-                      </View>
+              {method === "manual" &&
+                night.clubs.map((c) => (
+                  <View style={s.card} key={c.id}>
+                    <Text style={s.heading}>{c.name}</Text>
+                    <View style={s.wrap}>
+                      {draft.map((t, i) => (
+                        <Button
+                          key={t.id}
+                          label={`R${i + 1} · ${t.size} plazas`}
+                          secondary={!t.clubIds.includes(c.id)}
+                          onPress={() =>
+                            setDraft((a) =>
+                              a!.map((x, j) => ({
+                                ...x,
+                                clubIds:
+                                  j === i
+                                    ? [
+                                        ...x.clubIds.filter(
+                                          (id) => id !== c.id,
+                                        ),
+                                        c.id,
+                                      ]
+                                    : x.clubIds.filter((id) => id !== c.id),
+                              })),
+                            )
+                          }
+                        />
+                      ))}
                     </View>
-                  ))
-                : null}
+                  </View>
+                ))}
               {draft.map((t, i) => (
                 <View style={s.card} key={t.id}>
                   <Badge>
-                    RELÁMPAGO {i + 1} · {t.clubIds.length}/{t.size} PLAZAS
+                    RELÁMPAGO {i + 1} · {t.clubIds.length}/{t.size} EQUIPOS
                   </Badge>
-                  <Text style={s.heading}>{format(t.size)}</Text>
+                  <FormatSelector
+                    size={t.size}
+                    value={t.format ?? defaultFormat(t.size)}
+                    onChange={(kind) =>
+                      setDraft((a) =>
+                        a!.map((x) =>
+                          x.id === t.id ? { ...x, format: kind } : x,
+                        ),
+                      )
+                    }
+                  />
+                  <Text style={s.heading}>{format(t.size, t.format)}</Text>
+                  <Text style={s.subtitle}>
+                    Hasta {maxMatches(t.size, t.format)} partidos por equipo.
+                  </Text>
                   {t.clubIds.map((id) => (
                     <Text key={id} style={s.text}>
                       {night.clubs.find((c) => c.id === id)?.name}
@@ -848,8 +931,10 @@ export function Tournaments() {
                 label={busy ? "Guardando…" : "Confirmar reparto"}
                 disabled={busy}
                 onPress={async () => {
+                  if (!isAdmin || !night) return;
                   setBusy(true);
                   try {
+                    validatePlan(night, draft);
                     await confirmPlan(draft);
                     setPlanning(false);
                     setDraft(null);
@@ -876,29 +961,23 @@ export function Tournaments() {
       {detail && night && (
         <Sheet title="Enfrentamientos" onClose={() => setDetail(null)}>
           <Badge>
-            {format(detail.size)} · MÁX. {detail.size === 4 ? 4 : 5} PARTIDOS
+            {format(detail.size, detail.format)} · MÁX.{" "}
+            {maxMatches(detail.size, detail.format)} PARTIDOS
           </Badge>
-          {(detail.size === 8
-            ? [detail.clubIds.slice(0, 4), detail.clubIds.slice(4)]
-            : [detail.clubIds]
-          ).map((group, g) => (
-            <View key={g} style={{ gap: 14 }}>
-              <Text style={s.heading}>
-                {detail.size === 8
-                  ? `Grupo ${g === 0 ? "A" : "B"}`
-                  : "Fase de liga"}
-              </Text>
-              {roundRobin(group).map((round, r) => (
-                <View style={s.card} key={r}>
-                  <Text style={s.eyebrow}>JORNADA {r + 1}</Text>
-                  {round.map(([a, b]) => (
-                    <View style={s.row} key={a + b}>
+          {competitionPhases(detail).map((phase, i) => (
+            <View key={i} style={{ gap: 14 }}>
+              <Text style={s.heading}>{phase.title}</Text>
+              {phase.rounds.map((round, r) => (
+                <View key={r} style={s.card}>
+                  <Text style={s.eyebrow}>{round.label.toUpperCase()}</Text>
+                  {round.matches.map(([a, b], m) => (
+                    <View style={s.row} key={m}>
                       <Text style={[s.text, { flex: 1 }]}>
-                        {night.clubs.find((c) => c.id === a)?.name}
+                        {night.clubs.find((c) => c.id === a)?.name ?? a}
                       </Text>
                       <Text style={s.subtitle}>vs</Text>
                       <Text style={[s.text, { flex: 1, textAlign: "right" }]}>
-                        {night.clubs.find((c) => c.id === b)?.name}
+                        {night.clubs.find((c) => c.id === b)?.name ?? b}
                       </Text>
                     </View>
                   ))}
@@ -906,26 +985,13 @@ export function Tournaments() {
               ))}
             </View>
           ))}
-          {detail.size === 4 ? (
-            <View style={s.card}>
-              <Text style={s.heading}>Final</Text>
-              <Text style={s.text}>1.º de liga — 2.º de liga</Text>
-            </View>
-          ) : detail.size === 8 ? (
-            <View style={s.card}>
-              <Text style={s.heading}>Semifinales cruzadas</Text>
-              <Text style={s.text}>1.º A — 2.º B</Text>
-              <Text style={s.text}>1.º B — 2.º A</Text>
-              <Text style={s.heading}>Final</Text>
-              <Text style={s.text}>Ganador SF1 — Ganador SF2</Text>
-            </View>
-          ) : (
+          {(detail.format ?? defaultFormat(detail.size)) === "liga" && (
             <Note>
-              El primero de la liga será campeón, sin final adicional.
+              El primero de la clasificación será campeón, sin final adicional.
             </Note>
           )}
           <Note>
-            La duración de la noche dependerá de los horarios y márgenes de los
+            La duración de la noche depende de los horarios y márgenes entre
             partidos, todavía pendientes.
           </Note>
         </Sheet>

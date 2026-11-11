@@ -8,6 +8,21 @@ Menú lateral: Inicio, Torneos, Mi Club, Palmarés y Ajustes. Torneos agrupa Noc
 
 Paleta vinotinto centralizada en `src/theme.ts`. Logo original MCM, sin recortes ni recoloración, en el acceso, Inicio y menú. El icono cuadrado sigue siendo provisional.
 
+## Copa y Liga
+
+Solo los administradores crean y configuran los relámpagos al confirmar el reparto de una sesión. Cada torneo guarda su formato por separado:
+
+| Formato | Equipos | Rondas | Máximo de partidos |
+| --- | --- | --- | --- |
+| Copa | 4 | Grupo único y final | 4 |
+| Copa | 8 | Dos grupos de cuatro, semifinales cruzadas y final | 5 |
+| Liga | 4 | Todos contra todos a una vuelta, sin final | 3 |
+| Liga | 6 | Todos contra todos a una vuelta, sin final | 5 |
+
+La configuración propone combinaciones completas según los inscritos (10 → 6+4; 12 → 8+4; 14 → 8+6; 16 → 8+8). El administrador puede cambiarlas, revisar los formatos individualmente y confirmar. Las propuestas no crean torneos automáticamente ni excluyen a nadie; con un número impar se pide revisar la lista.
+
+El sorteo aleatorio sigue siendo el reparto predeterminado. La lista conserva siempre su número de llegada. El servidor comprueba formatos, plazas, duplicados, pertenencia de todos los inscritos y permisos antes de cerrar la sesión. Los repartos anteriores conservan su interpretación: 4 y 8 eran Copa; 6 era Liga.
+
 ## Cuentas y servidor
 
 Proyecto Supabase independiente: `mkbvplehrbjrufhkcqun`, en la organización elegida por el propietario. No se han copiado cuentas, contraseñas, clubes ni datos de ConvoSquad.

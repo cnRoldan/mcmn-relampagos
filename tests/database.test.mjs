@@ -2,13 +2,15 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
-const SQL = await fs.readFile(
-  new URL(
-    "../supabase/migrations/202611110001_captains_and_registration.sql",
-    import.meta.url,
-  ),
-  "utf8",
-);
+const directory = new URL("../supabase/migrations/", import.meta.url);
+const SQL = (
+  await Promise.all(
+    (await fs.readdir(directory))
+      .filter((n) => n.endsWith(".sql"))
+      .sort()
+      .map((n) => fs.readFile(new URL(n, directory), "utf8")),
+  )
+).join("\n");
 const admin = "00000000-0000-4000-8000-000000000001",
   a = "00000000-0000-4000-8000-000000000002",
   b = "00000000-0000-4000-8000-000000000003";
@@ -191,6 +193,90 @@ test("Servidor: EA ID normalizado y límite de intentos inaccesible al capitán"
     );
     await as(db, a, () =>
       assert.rejects(db.query("select public.consume_auth_attempt($1)", [key])),
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("Servidor: Copa/Liga, límites y compatibilidad con repartos anteriores", async () => {
+  const db = await setup();
+  try {
+    const plan = (size, format) => [
+      {
+        id: "t",
+        size,
+        format,
+        clubIds: Array.from({ length: size }, (_, i) => String(i)),
+      },
+    ];
+    for (const [size, format] of [
+      [4, "copa"],
+      [4, "liga"],
+      [6, "liga"],
+      [8, "copa"],
+    ])
+      await db.query("select public.check_competition_plan($1)", [
+        JSON.stringify(plan(size, format)),
+      ]);
+    for (const [size, format] of [
+      [8, "liga"],
+      [6, "copa"],
+      [4, "otro"],
+    ])
+      await assert.rejects(
+        db.query("select public.check_competition_plan($1)", [
+          JSON.stringify(plan(size, format)),
+        ]),
+      );
+    await db.query("select public.check_competition_plan($1)", [
+      JSON.stringify([
+        { id: "legacy", size: 4, clubIds: ["a", "b", "c", "d"] },
+      ]),
+    ]);
+    await assert.rejects(
+      db.query("select public.check_competition_plan($1)", [
+        JSON.stringify([...plan(4, "liga"), ...plan(4, "copa")]),
+      ]),
+    );
+    await as(db, a, () =>
+      assert.rejects(
+        db.query("select public.confirm_plan(gen_random_uuid(),$1)", [
+          JSON.stringify(plan(4, "liga")),
+        ]),
+      ),
+    );
+    const n = await as(db, admin, () =>
+      one(
+        db,
+        "select public.create_night('Liga de prueba','2026-11-14','22:00')",
+      ),
+    );
+    const ids = [];
+    for (let i = 0; i < 4; i++)
+      ids.push(
+        await as(db, admin, () =>
+          one(db, "select (public.admin_register_club($1,$2,'{}')).club_id", [
+            n,
+            "Liga Club " + i,
+          ]),
+        ),
+      );
+    await as(db, admin, () =>
+      db.query("select public.confirm_plan($1,$2)", [
+        n,
+        JSON.stringify([{ id: "liga", size: 4, format: "liga", clubIds: ids }]),
+      ]),
+    );
+    const stored = await one(
+      db,
+      "select tournaments from public.nights where id=$1",
+      [n],
+    );
+    assert.equal(stored[0].format, "liga");
+    assert.equal(
+      await one(db, "select status from public.nights where id=$1", [n]),
+      "closed",
     );
   } finally {
     await db.close();

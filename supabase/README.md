@@ -20,6 +20,11 @@ Las RPCs usan `SECURITY DEFINER` de forma intencional, fijan `search_path` vací
 
 ## Validación
 
-Nueve pruebas pasan: siete de dominio y dos suites de PostgreSQL sobre RLS y operaciones reales del esquema. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
+Trece pruebas pasan: diez de dominio y tres suites de PostgreSQL sobre RLS, formatos y operaciones reales del esquema. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
 
 La revisión automática rechazó crear usuarios QA directamente en Auth y elevar uno a administrador. No se crearon esos usuarios ni se intentó eludir el bloqueo. Por tanto, falta verificar un inicio de sesión válido y una inscripción con cuentas reales después de registrar al propietario.
+
+
+## Copa y Liga
+
+La migración `copa_liga_formats` añade la validación de Copa (4/8) y Liga (4/6), normaliza el formato en los nuevos repartos y conserva la compatibilidad con clientes anteriores. La función interna de validación no se expone a clientes. `confirm_plan` mantiene el control de administrador y el bloqueo transaccional compartido con las inscripciones. Se han ejecutado consultas sobre el servidor para las cuatro combinaciones válidas, el rechazo de Liga de ocho y los permisos de ejecución.
