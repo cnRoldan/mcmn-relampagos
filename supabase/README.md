@@ -6,7 +6,7 @@ Los capitanes acceden por identificador de EA y contraseña. La función `ea-aut
 
 Administrador solicitado: `MCMN Relámpagos`. Crear primero la cuenta. Conceder el rol solo después de comprobar que pertenece al propietario; no se concede automáticamente por elegir ese nombre.
 
-Las inscripciones se serializan bloqueando la fila de la noche, se numeran en servidor y no se renumeran al retirar un club. El sorteo afecta al reparto entre torneos, no a la lista de llegada.
+Las inscripciones se serializan bloqueando la fila del torneo, se numeran en servidor y no se renumeran al excluir un club. El sorteo afecta a los grupos y al calendario, sin cambiar la lista de llegada.
 
 ## Acceso por identificador
 
@@ -20,7 +20,7 @@ Las RPCs usan `SECURITY DEFINER` de forma intencional, fijan `search_path` vací
 
 ## Validación
 
-Trece pruebas pasan: diez de dominio y tres suites de PostgreSQL sobre RLS, formatos y operaciones reales del esquema. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
+Diecisiete pruebas pasan, incluidas cinco suites de PostgreSQL sobre RLS, formatos, normas, margen, exclusiones y baneos. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
 
 La revisión automática rechazó crear usuarios QA directamente en Auth y elevar uno a administrador. No se crearon esos usuarios ni se intentó eludir el bloqueo. Por tanto, falta verificar un inicio de sesión válido y una inscripción con cuentas reales después de registrar al propietario.
 
@@ -28,3 +28,17 @@ La revisión automática rechazó crear usuarios QA directamente en Auth y eleva
 ## Copa y Liga
 
 La migración `copa_liga_formats` añade la validación de Copa (4/8) y Liga (4/6), normaliza el formato en los nuevos repartos y conserva la compatibilidad con clientes anteriores. La función interna de validación no se expone a clientes. `confirm_plan` mantiene el control de administrador y el bloqueo transaccional compartido con las inscripciones. Se han ejecutado consultas sobre el servidor para las cuatro combinaciones válidas, el rechazo de Liga de ocho y los permisos de ejecución.
+
+## Torneos compartibles y moderación
+
+La migración `shareable_tournaments` conserva los nombres internos de tablas y añade reglas y margen de inicio, exclusión de inscripciones, avisos privados y baneos de cuentas. Las altas públicas de torneo solo se leen a través de `get_public_tournament(uuid)`: es una proyección de metadatos deliberadamente pública, sin contactos, identidades ni avisos. El aviso [función SECURITY DEFINER accesible a anónimos](https://supabase.com/docs/guides/observability/advisors?queryGroups=lint&lint=0028_anon_security_definer_function_executable) es intencional exclusivamente para esta lectura acotada por UUID.
+
+`list_tournaments()` usa SECURITY INVOKER y respeta RLS. Los clientes ya no pueden ejecutar los antiguos endpoints de creación sin normas, inscripción sin aceptación o retirada destructiva. `join_tournament` toma el club de la identidad actual, comprueba la aceptación de normas y conserva la numeración de llegada con el mismo bloqueo de torneo utilizado para cierres y exclusiones. No hay datos de jugadores ni plantillas.
+
+El administrador configura una única competición con todos los clubes no excluidos. El servidor impide confirmarla antes de la hora efectiva (hora original de Madrid más margen) y mantiene el límite de cinco partidos por club. La inscripción no se cierra automáticamente por hora.
+
+Los motivos de exclusión se guardan en `registration_notices`, con RLS para propietario del club y administradores. Las push no se envían todavía. Los baneos impiden las lecturas y escrituras privadas de la cuenta con sesiones ya emitidas. El acceso por contraseña también comprueba el baneo antes de devolver una sesión. Un baneo excluye las inscripciones de torneos abiertos; quitarlo no readmite clubes automáticamente ni cambia partidos ya confirmados.
+
+No se crean cuentas QA privilegiadas en el servidor: la denegación previa de revisión automática se respeta. Las pruebas de cuentas y roles se ejecutan de forma aislada; los recorridos visuales usan API simulada.
+
+La auditoría también indica que la protección de contraseñas filtradas de Supabase está desactivada ([configuración](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)); esta entrega no cambia esa configuración.

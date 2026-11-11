@@ -6,6 +6,8 @@ export type Club = {
   registrationOrder?: number;
   registeredAt?: string;
   captainId?: string | null;
+  excluded?: boolean;
+  exclusionReason?: string;
 };
 export type CompetitionFormat = "copa" | "liga";
 export type Tournament = {
@@ -22,6 +24,10 @@ export type Night = {
   clubs: Club[];
   tournaments: Tournament[];
   demo?: boolean;
+  rules?: string;
+  graceMinutes?: number;
+  effectiveStart?: string;
+  singleTournament?: boolean;
 };
 export type Data = { version: 1; nights: Night[]; activeId: string | null };
 export const emptyData: Data = { version: 1, nights: [], activeId: null };
@@ -48,23 +54,6 @@ export function maxMatches(
       "Ese formato no está disponible para este número de equipos con el límite de cinco partidos.",
     );
   return kind === "liga" ? size - 1 : size === 4 ? 4 : 5;
-}
-/** Minimum number of complete tournaments; larger groups break equal ties. */
-export function suggestSplit(count: number): Size[] | null {
-  if (!Number.isSafeInteger(count) || count < 4 || count % 2 !== 0) return null;
-  const plans: (Size[] | null)[] = Array(count + 1).fill(null);
-  plans[0] = [];
-  for (let n = 1; n <= count; n++)
-    for (const size of [8, 6, 4] as Size[]) {
-      const before = plans[n - size];
-      if (
-        n >= size &&
-        before &&
-        (!plans[n] || before.length + 1 < plans[n]!.length)
-      )
-        plans[n] = [size, ...before];
-    }
-  return plans[count];
 }
 export type CompetitionPhase = {
   title: string;
@@ -148,13 +137,13 @@ export function validateClub(night: Night, name: string, contacts: string[]) {
           .localeCompare(name.trim(), "es", { sensitivity: "base" }) === 0,
     )
   )
-    throw new Error("Este club ya está inscrito en la noche.");
+    throw new Error("Este club ya está inscrito en el torneo.");
   if (contacts.length > 3 || contacts.some((c) => c.length > 24))
     throw new Error("Se permiten hasta tres contactos de 24 caracteres.");
 }
 export function validatePlan(night: Night, plan: Tournament[]) {
   if (night.tournaments.length)
-    throw new Error("La noche ya tiene un reparto confirmado.");
+    throw new Error("El torneo ya tiene una configuración confirmada.");
   if (
     !plan.length ||
     plan.some(
@@ -172,11 +161,16 @@ export function validatePlan(night: Night, plan: Tournament[]) {
     new Set(plan.map((t) => t.id)).size !== plan.length
   )
     throw new Error("Cada relámpago debe tener un identificador distinto.");
+  if (night.singleTournament && plan.length !== 1)
+    throw new Error(
+      "Elige los participantes y configura una única Copa o Liga para este torneo.",
+    );
+  const participants = night.clubs.filter((c) => !c.excluded);
   const ids = plan.flatMap((t) => t.clubIds);
   if (
-    ids.length !== night.clubs.length ||
+    ids.length !== participants.length ||
     new Set(ids).size !== ids.length ||
-    ids.some((id) => !night.clubs.some((c) => c.id === id))
+    ids.some((id) => !participants.some((c) => c.id === id))
   )
     throw new Error(
       "Cada club debe aparecer exactamente una vez en el reparto.",

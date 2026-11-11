@@ -87,6 +87,7 @@ export function Field({
   email = false,
   autoCapitalize,
   maxLength = 70,
+  multiline = false,
 }: {
   label: string;
   value: string;
@@ -97,13 +98,19 @@ export function Field({
   email?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   maxLength?: number;
+  multiline?: boolean;
 }) {
   return (
     <View style={s.field}>
       <Text style={s.label}>{label}</Text>
       <TextInput
         accessibilityLabel={label}
-        style={s.input}
+        multiline={multiline}
+        numberOfLines={multiline ? 5 : 1}
+        style={[
+          s.input,
+          multiline && { minHeight: 150, textAlignVertical: "top" },
+        ]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

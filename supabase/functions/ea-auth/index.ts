@@ -37,6 +37,9 @@ Deno.serve(async(req:Request)=>{
   if(lookup.error)return reply({error:'El acceso no está disponible. Inténtalo más tarde.'},503);
   const {data,error}=await auth.auth.signInWithPassword({email:lookup.data||'unknown-account@mcm.invalid',password});
   if(error||!data.session||!lookup.data)return reply({error:'ID de EA o contraseña incorrectos.'},401);
+  const member=await admin.from('profiles').select('is_banned').eq('id',data.user.id).single();
+  if(member.error){await auth.auth.signOut({scope:'local'});return reply({error:'No se pudo verificar el estado de tu cuenta.'},503)}
+  if(member.data.is_banned){await auth.auth.signOut({scope:'local'});return reply({error:'La organización ha suspendido el acceso de esta cuenta.'},403)}
   return reply({session:{access_token:data.session.access_token,refresh_token:data.session.refresh_token}});
  }catch{return reply({error:'No se ha podido completar el acceso.'},400)}
 });

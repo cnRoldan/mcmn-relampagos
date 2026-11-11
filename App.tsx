@@ -1,5 +1,5 @@
 import "react-native-gesture-handler";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Text,
   View,
@@ -20,6 +20,9 @@ import { StatusBar } from "expo-status-bar";
 import { useApp } from "./src/state/AppState";
 import { AuthProvider, useAuth } from "./src/cloud/AuthProvider";
 import { AuthScreen } from "./src/screens/AuthScreen";
+import { TournamentLinkProvider, useTournamentLink } from "./src/cloud/links";
+import { SharedTournament } from "./src/screens/SharedTournament";
+import { Button, Page, Note } from "./src/components/UI";
 import { Provider } from "./src/state/AppState";
 import {
   Home,
@@ -72,6 +75,7 @@ function SideMenu(props: DrawerContentComponentProps) {
 }
 function AppNavigator() {
   const { width } = useWindowDimensions();
+  const sharedId = useTournamentLink();
   return (
     <NavigationContainer
       theme={{
@@ -85,6 +89,7 @@ function AppNavigator() {
     >
       <StatusBar style="dark" />
       <Drawer.Navigator
+        initialRouteName={sharedId ? "Torneos" : "Inicio"}
         drawerContent={(p) => <SideMenu {...p} />}
         screenOptions={{
           drawerType: width >= 900 ? "permanent" : "front",
@@ -114,7 +119,15 @@ function AppNavigator() {
           component={Home}
           options={{ title: "Inicio" }}
         />
-        <Drawer.Screen name="Torneos" component={TournamentHub} />
+        <Drawer.Screen
+          name="Torneos"
+          component={TournamentHub}
+          initialParams={
+            sharedId
+              ? { section: "Información", tournamentId: sharedId }
+              : undefined
+          }
+        />
         <Drawer.Screen name="Mi Club" component={MyClub} />
         <Drawer.Screen name="Palmarés" component={Honours} />
         <Drawer.Screen name="Ajustes" component={Settings} />
@@ -124,17 +137,56 @@ function AppNavigator() {
 }
 
 function SessionGate() {
-  const { configured, loading, session } = useAuth();
+  const { configured, loading, session, profile, signOut } = useAuth(),
+    sharedId = useTournamentLink();
+  const [access, setAccess] = useState(false),
+    [error, setError] = useState("");
+  useEffect(() => setAccess(false), [sharedId, session?.user.id]);
   if (configured && loading)
     return (
       <View style={{ flex: 1, justifyContent: "center" }}>
         <ActivityIndicator color={colors.primary} />
       </View>
     );
-  if (configured && !session) return <AuthScreen />;
+  if (configured && !session) {
+    if (sharedId && !access)
+      return (
+        <SharedTournament id={sharedId} onAccess={() => setAccess(true)} />
+      );
+    return (
+      <View style={{ flex: 1 }}>
+        {sharedId && (
+          <View style={{ padding: 14 }}>
+            <Button
+              secondary
+              label="← Volver al torneo"
+              onPress={() => setAccess(false)}
+            />
+          </View>
+        )}
+        <AuthScreen />
+      </View>
+    );
+  }
+  if (profile?.is_banned)
+    return (
+      <Page title="Acceso suspendido">
+        <Note>
+          {profile.ban_reason ||
+            "La organización ha suspendido el acceso de esta cuenta."}
+        </Note>
+        <Button
+          label="Cerrar sesión"
+          onPress={() => void signOut().catch((e) => setError(e.message))}
+        />
+        {!!error && <Text>{error}</Text>}
+      </Page>
+    );
   return (
-    <Provider key={session?.user.id || "local-preview"}>
-      <AppNavigator />
+    <Provider
+      key={`${session?.user.id || "local-preview"}:${sharedId || "normal"}`}
+    >
+      <AppNavigator key={sharedId || "normal"} />
     </Provider>
   );
 }
@@ -143,7 +195,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <SessionGate />
+          <TournamentLinkProvider>
+            <SessionGate />
+          </TournamentLinkProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

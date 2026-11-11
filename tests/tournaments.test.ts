@@ -5,7 +5,6 @@ import {
   validateClub,
   validatePlan,
   parseData,
-  suggestSplit,
   maxMatches,
   competitionPhases,
   defaultFormat,
@@ -48,7 +47,7 @@ test("Ocho clubes: tres jornadas de grupos y dos eliminatorias", () => {
   assert.equal(roundRobin(b).length + 2, 5);
   assert(!a.some((id) => b.includes(id)));
 });
-test("16 inscritos: dos relámpagos independientes de ocho", () => {
+test("Compatibilidad de datos antiguos con varios cuadros", () => {
   const n = night(16),
     ids = n.clubs.map((c) => c.id);
   assert.doesNotThrow(() =>
@@ -112,22 +111,6 @@ test("Copa y Liga tienen rondas distintas con cuatro clubes", () => {
   assert.throws(() => maxMatches(8, "liga"));
   assert.throws(() => maxMatches(6, "copa"));
 });
-test("Propuestas completas según inscritos; sin excluir impares", () => {
-  assert.deepEqual(suggestSplit(10), [6, 4]);
-  assert.deepEqual(suggestSplit(12), [8, 4]);
-  assert.deepEqual(suggestSplit(14), [8, 6]);
-  assert.deepEqual(suggestSplit(16), [8, 8]);
-  for (const n of [0, 1, 2, 3, 5, 7, 9, 15])
-    assert.equal(suggestSplit(n), null);
-  for (let n = 4; n <= 100; n += 2) {
-    const split = suggestSplit(n)!;
-    assert.equal(
-      split.reduce((a, b) => a + b, 0),
-      n,
-    );
-    assert(split.every((size) => maxMatches(size) <= 5));
-  }
-});
 test("El reparto rechaza Liga de ocho, Copa de seis y formatos desconocidos", () => {
   for (const [count, kind] of [
     [8, "liga"],
@@ -146,4 +129,34 @@ test("El reparto rechaza Liga de ocho, Copa de seis y formatos desconocidos", ()
       ]),
     );
   }
+});
+
+test("Un torneo único usa solo los participantes no excluidos", () => {
+  const n = night(6);
+  n.singleTournament = true;
+  n.clubs[4].excluded = true;
+  n.clubs[5].excluded = true;
+  assert.doesNotThrow(() =>
+    validatePlan(n, [
+      {
+        id: "t",
+        size: 4,
+        format: "copa",
+        clubIds: n.clubs.slice(0, 4).map((c) => c.id),
+      },
+    ]),
+  );
+  assert.throws(() =>
+    validatePlan(n, [
+      { id: "t", size: 6, format: "liga", clubIds: n.clubs.map((c) => c.id) },
+    ]),
+  );
+  const many = night(8);
+  many.singleTournament = true;
+  assert.throws(() =>
+    validatePlan(many, [
+      { id: "a", size: 4, clubIds: many.clubs.slice(0, 4).map((c) => c.id) },
+      { id: "b", size: 4, clubIds: many.clubs.slice(4).map((c) => c.id) },
+    ]),
+  );
 });

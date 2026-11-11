@@ -1,76 +1,73 @@
 # MCM · Torneos Relámpago
 
-App independiente de ConvoSquad, creada con React Native, Expo y TypeScript para iOS, Android y tablets. La vista web del mismo código se publica en https://mcm-torneos-relampago.netlify.app para revisar cambios juntos.
+App independiente de ConvoSquad, con React Native, Expo y TypeScript para iOS, Android y tablet. La vista web del mismo código se publica en https://mcm-torneos-relampago.netlify.app para revisar cambios juntos.
 
-## Navegación y diseño
+## Modelo y navegación
 
-Menú lateral: Inicio, Torneos, Mi Club, Palmarés y Ajustes. Torneos agrupa Noches, Inscritos y Relámpagos. El menú es fijo a partir de 900 puntos de ancho; en móvil admite botón y gesto lateral.
+Menú lateral: Inicio, Torneos, Mi Club, Palmarés y Ajustes. Torneos abre una lista de competiciones. Cada ficha reúne Información, Inscritos y Competición. «Noches de juego» desaparece de la interfaz; el nombre de tabla `nights` se conserva solo como detalle interno de compatibilidad.
 
-Paleta vinotinto centralizada en `src/theme.ts`. Logo original MCM, sin recortes ni recoloración, en el acceso, Inicio y menú. El icono cuadrado sigue siendo provisional.
+Un administrador crea el torneo con nombre, fecha, hora de inicio de Madrid y normas. Los capitanes pueden apuntarse mientras siga abierto, incluso si la hora prevista ha pasado: no se cierra por reloj ni se elige un formato automáticamente. El administrador puede ampliar la hora visible y confirmar el formato a partir de esa hora efectiva.
 
-## Copa y Liga
+Cada nuevo torneo admite una única Copa o Liga. Los clubes que quedan fuera conservan su inscripción y número de llegada; nunca se reparten automáticamente entre otros torneos. Los repartos antiguos siguen siendo legibles.
 
-Solo los administradores crean y configuran los relámpagos al confirmar el reparto de una sesión. Cada torneo guarda su formato por separado:
-
-| Formato | Equipos | Rondas | Máximo de partidos |
+| Formato actual | Equipos | Rondas | Máximo por club |
 | --- | --- | --- | --- |
-| Copa | 4 | Grupo único y final | 4 |
-| Copa | 8 | Dos grupos de cuatro, semifinales cruzadas y final | 5 |
-| Liga | 4 | Todos contra todos a una vuelta, sin final | 3 |
-| Liga | 6 | Todos contra todos a una vuelta, sin final | 5 |
+| Copa | 4 | Grupo único y final | 4 partidos |
+| Copa | 8 | Dos grupos, semifinales cruzadas y final | 5 partidos |
+| Liga | 4 | Todos contra todos, sin final | 3 partidos |
+| Liga | 6 | Todos contra todos, sin final | 5 partidos |
 
-La configuración propone combinaciones completas según los inscritos (10 → 6+4; 12 → 8+4; 14 → 8+6; 16 → 8+8). El administrador puede cambiarlas, revisar los formatos individualmente y confirmar. Las propuestas no crean torneos automáticamente ni excluyen a nadie; con un número impar se pide revisar la lista.
+Si el número de participantes no encaja en las configuraciones disponibles, el administrador revisa los inscritos o concede margen. No se excluye a nadie automáticamente. La generación de los enfrentamientos exige incluir exactamente a quienes siguen dentro y mantiene el máximo de cinco partidos.
 
-El sorteo aleatorio sigue siendo el reparto predeterminado. La lista conserva siempre su número de llegada. El servidor comprueba formatos, plazas, duplicados, pertenencia de todos los inscritos y permisos antes de cerrar la sesión. Los repartos anteriores conservan su interpretación: 4 y 8 eran Copa; 6 era Liga.
+## Inscripción por enlace
 
-## Cuentas y servidor
+Desde la ficha, «Compartir torneo» genera `https://mcm-torneos-relampago.netlify.app/torneo/<uuid>`. La ficha pública muestra nombre, horario efectivo, normas, estado y cantidad de inscritos; no expone contactos, cuentas de capitanes ni avisos privados.
 
-Proyecto Supabase independiente: `mkbvplehrbjrufhkcqun`, en la organización elegida por el propietario. No se han copiado cuentas, contraseñas, clubes ni datos de ConvoSquad.
+El capitán entra o crea su cuenta, vuelve al mismo torneo, crea o vincula su club si es necesario, acepta las normas y confirma. El servidor toma la identidad y el club de la sesión, asigna un número de llegada y trata las repeticiones como la misma inscripción. No hay jugadores, plantillas ni registro de miembros; basta una cuenta de capitán representante.
 
-- Acceso con ID de EA y contraseña. El alta solo pide ese identificador y una contraseña nueva de MCM; no solicita ni envía correos.
-- Las contraseñas las gestiona Supabase Auth. `ea-auth` utiliza un identificador interno sin correspondencia real para Supabase Auth y limita los intentos por ID de EA.
-- Cada cuenta nueva es capitán. El rol de administrador se concede desde el servidor tras identificar al propietario; no basta con escribir un nombre o modificar metadatos.
-- Un capitán crea un club, gestiona hasta tres contactos opcionales y lo inscribe en las noches abiertas.
-- Si el club fue añadido manualmente, un administrador vincula su capitán por ID de EA.
-- RLS y RPCs comprobados en servidor limitan las acciones: solo administradores crean noches, añaden o retiran inscripciones y confirman repartos. Los capitanes solo inscriben su propio club.
-- Los contactos solo se leen por su capitán y los administradores.
-- Las inscripciones se numeran en servidor con bloqueo transaccional por noche. La lista respeta ese número; retirar un club no renumera los restantes. El sorteo predeterminado afecta al reparto entre torneos, no al orden de llegada.
-- El cliente consulta los datos al entrar, al volver al primer plano, cada 20 segundos y al pulsar Actualizar. Las escrituras no se confirman sin respuesta del servidor.
-- Sesiones nativas en Expo SecureStore (con fragmentación para respetar límites de tamaño); en web, almacenamiento local. Cerrar sesión elimina el acceso en este dispositivo.
+Los enlaces web mantienen el destino al recargar o autenticarse. El esquema nativo `relampagos://torneo/<uuid>` se reconoce en código; los enlaces universales del sistema y las compilaciones móviles requieren configurar posteriormente los identificadores y la distribución de la app.
 
-## Desarrollo
+## Cuentas, permisos y moderación
+
+Proyecto Supabase independiente `mkbvplehrbjrufhkcqun`, en la organización elegida por el propietario. No se han copiado cuentas ni datos de ConvoSquad.
+
+- Alta y acceso por ID de EA y contraseña de MCM de al menos ocho caracteres. No se solicita correo. La identidad interna de Supabase usa un dominio `.invalid` sin correspondencia real.
+- Cada alta es capitán. El rol administrativo se concede desde el servidor tras identificar al propietario; nunca se toma de metadatos editables por el usuario.
+- Cada capitán representa un club. Si se añadió manualmente, el administrador puede vincularlo a su cuenta. Los contactos opcionales (hasta tres) solo se leen por su capitán y los administradores.
+- Las inscripciones se serializan por torneo, con hora y número asignados en servidor. Un capitán no puede inscribir otro club ni volver a entrar por su cuenta tras quedar excluido.
+- El administrador puede excluir o readmitir un club antes de confirmar la competición. El motivo queda en un aviso privado visible para el capitán y administradores. La readmisión conserva el número original.
+- Los baneos de cuentas se gestionan desde Ajustes. Bloquean nuevas acciones y lecturas privadas incluso con un token anterior; los torneos abiertos dejan su club fuera. No cambian partidos confirmados. Quitar un baneo no readmite automáticamente los clubes y no se permite banear administradores desde esta pantalla.
+- La interfaz consulta cambios al entrar, al volver al primer plano, cada 20 segundos y con Actualizar. Los avisos de exclusión se muestran en el torneo y Mi Club. **Push pendiente**, como pidió el usuario; no se envían correos ni mensajes externos.
+- Sesiones nativas en Expo SecureStore; web en almacenamiento local. Cerrar sesión retira el acceso de ese dispositivo y devuelve a la ficha pública si se entró por enlace.
+
+## Desarrollo y validación
 
 ```sh
 npm ci
 cp .env.example .env
-# Completar únicamente la URL y la clave publicable del proyecto MCM.
+# Completar solo la URL y la clave publicable del proyecto MCM.
 npx expo start
-```
-
-Sin esas variables se conserva el prototipo local, aislado del servidor; no simula un login. Los datos de prueba locales no se migran automáticamente.
-
-```sh
 npm run typecheck
 npm test
 npx expo export --platform all --max-workers 2
 npm run build:web
 ```
 
-`tests/database.test.mjs` aplica el SQL real a PostgreSQL aislado con PGlite y prueba RLS, roles, privacidad, duplicados, numeración, cierre y rollback. Los flujos visuales se revisan con API simulada; esto no equivale a comprobar un acceso válido real ni a probar dispositivos físicos. Ver `supabase/README.md` para despliegue y detalles de Auth.
+Sin variables de servidor se conserva el prototipo local, aislado de las cuentas reales. Los ejemplos locales no se migran automáticamente.
+
+Las pruebas aplican las migraciones reales a PostgreSQL aislado con PGlite y comprueban permisos, normas, privacidad, numeración, margen, cierre, exclusiones y baneos. Los recorridos visuales de capitán y administrador se revisan con API simulada y no crean cuentas QA ni conceden privilegios en producción. Esa cobertura no equivale a validar un acceso real con contraseña del usuario ni un dispositivo físico.
 
 ## Publicación
 
-Netlify aloja la exportación web; no genera APK ni versiones iOS. `netlify.toml` configura `npm run build:web`, salida `dist`, fallback SPA y caché para los bundles. `public/_redirects` permite también despliegues manuales.
+Netlify exporta la vista web desde `npm run build:web`, salida `dist`. `public/_redirects` y `netlify.toml` permiten abrir directamente los enlaces de torneo. Las claves `EXPO_PUBLIC_SUPABASE_*` son publicables; nunca poner credenciales de servicio en el cliente. `.env`, `.netlify/` y el estado temporal de Supabase están excluidos de Git.
 
 ```sh
 npm run build:web
 npx --yes netlify-cli deploy --prod --dir dist --no-build
 ```
 
-Las dos variables `EXPO_PUBLIC_SUPABASE_*` son públicas y están configuradas en Netlify. Nunca introducir credenciales de servicio en variables `EXPO_PUBLIC_*`, código cliente ni Git. `.netlify/` y `.env` se excluyen del repositorio.
+`eas.json` prepara perfiles de APK, simulador iOS y producción. Falta vincular un proyecto EAS, concretar identificadores y configurar firma antes de producir instalables.
 
-`eas.json` prepara perfiles de APK de pruebas, simulador iOS y producción. Falta vincular un proyecto EAS propio, decidir los identificadores y configurar firma antes de producir instalables.
+## Alcance pendiente
 
-## Próximo alcance
-
-Marcadores, puntos/desempates, sanciones, cupos/reservas, bajas posteriores al cierre, horarios de cada partido y recuperación de contraseña desde la app. Palmarés permanece vacío hasta registrar campeones confirmados. Los formatos de 4, 6 y 8 mantienen el límite de cinco partidos por club.
+Resultados, puntos y desempates, campeones y Palmarés, recuperación de cuentas, varios capitanes por club, notificaciones push y nuevas combinaciones de grupos. Las normas se fijan al crear el torneo; editar reglas tras abrir inscripciones requerirá versionar su aceptación.

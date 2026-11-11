@@ -2,7 +2,13 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { AppState } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import { cloudConfigured, supabase } from "./client";
-export type Profile = { id: string; ea_id: string; role: "admin" | "captain" };
+export type Profile = {
+  id: string;
+  ea_id: string;
+  role: "admin" | "captain";
+  is_banned?: boolean;
+  ban_reason?: string;
+};
 type Auth = {
   configured: boolean;
   loading: boolean;
@@ -57,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase || !session) return;
     const { data, error } = await supabase
       .from("profiles")
-      .select("id,ea_id,role")
+      .select("id,ea_id,role,is_banned,ban_reason")
       .eq("id", session.user.id)
       .single();
     if (error) throw new Error("No se ha podido cargar tu perfil.");
@@ -67,20 +73,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let alive = true;
     setProfile(null);
     setError("");
-    if (supabase && session)
-      supabase
-        .from("profiles")
-        .select("id,ea_id,role")
-        .eq("id", session.user.id)
-        .single()
-        .then(({ data, error }) => {
-          if (alive) {
-            if (error) setError("No se ha podido cargar tu perfil.");
-            else setProfile(data as Profile);
+    async function load() {
+      if (!supabase || !session) return;
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id,ea_id,role,is_banned,ban_reason")
+          .eq("id", session.user.id)
+          .single();
+        if (alive) {
+          if (error) setError("No se ha podido cargar tu perfil.");
+          else {
+            setProfile(data as Profile);
+            setError("");
           }
-        });
+        }
+      } catch {
+        if (alive) setError("No se ha podido cargar tu perfil.");
+      }
+    }
+    void load();
+    const timer = setInterval(() => void load(), 20000);
+    const focus = AppState.addEventListener("change", (s) => {
+      if (s === "active") void load();
+    });
     return () => {
       alive = false;
+      clearInterval(timer);
+      focus.remove();
     };
   }, [session?.user.id]);
   async function authRequest(body: Record<string, string>) {

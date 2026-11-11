@@ -52,7 +52,7 @@ test("Servidor: roles, contactos, orden de llegada y cierre transaccional", asyn
     const n = await as(db, admin, () =>
       one(
         db,
-        "select public.create_night('Noche de prueba','2026-11-14','22:00')",
+        "select public.create_tournament('Torneo de prueba','2020-01-01','22:00','Normas')",
       ),
     );
     const ca = await as(db, a, () =>
@@ -70,7 +70,7 @@ test("Servidor: roles, contactos, orden de llegada y cierre transaccional", asyn
         db.query("update public.profiles set role='admin' where id=$1", [a]),
       );
       await assert.rejects(
-        db.query("select public.create_night('Ajena','2026-11-14','22:00')"),
+        db.query("select public.create_night('Ajena','2020-01-01','22:00')"),
       );
       await assert.rejects(
         db.query("select public.register_club($1,$2)", [n, cb]),
@@ -88,13 +88,11 @@ test("Servidor: roles, contactos, orden de llegada y cierre transaccional", asyn
           [n, ca, a],
         ),
       );
-      await db.query("select public.register_club($1,$2)", [n, ca]);
-      await assert.rejects(
-        db.query("select public.register_club($1,$2)", [n, ca]),
-      );
+      await db.query("select public.join_tournament($1,true)", [n]);
+      await db.query("select public.join_tournament($1,true)", [n]);
     });
     await as(db, b, () =>
-      db.query("select public.register_club($1,$2)", [n, cb]),
+      db.query("select public.join_tournament($1,true)", [n]),
     );
     const rows = (
       await db.query(
@@ -110,10 +108,22 @@ test("Servidor: roles, contactos, orden de llegada y cierre transaccional", asyn
       [ca, cb],
     );
     await as(db, admin, () =>
-      db.query("select public.remove_registration($1,$2)", [n, ca]),
+      db.query(
+        "select public.set_registration_excluded($1,$2,true,'Fuera temporalmente')",
+        [n, ca],
+      ),
     );
     await as(db, a, () =>
-      db.query("select public.register_club($1,$2)", [n, ca]),
+      assert.rejects(db.query("select public.join_tournament($1,true)", [n])),
+    );
+    await as(db, admin, () =>
+      db.query(
+        "select public.set_registration_excluded($1,$2,false,'Readmitido')",
+        [n, ca],
+      ),
+    );
+    await as(db, a, () =>
+      db.query("select public.join_tournament($1,true)", [n]),
     );
     assert.deepEqual(
       (
@@ -121,7 +131,7 @@ test("Servidor: roles, contactos, orden de llegada y cierre transaccional", asyn
           "select registration_number from public.registrations order by registration_number",
         )
       ).rows.map((r) => Number(r.registration_number)),
-      [2, 3],
+      [1, 2],
     );
     const c = await as(db, admin, () =>
       one(db, "select (public.admin_register_club($1,'Club C','{}')).club_id", [
@@ -249,7 +259,7 @@ test("Servidor: Copa/Liga, límites y compatibilidad con repartos anteriores", a
     const n = await as(db, admin, () =>
       one(
         db,
-        "select public.create_night('Liga de prueba','2026-11-14','22:00')",
+        "select public.create_tournament('Liga de prueba','2020-01-01','22:00','Normas')",
       ),
     );
     const ids = [];
@@ -277,6 +287,290 @@ test("Servidor: Copa/Liga, límites y compatibilidad con repartos anteriores", a
     assert.equal(
       await one(db, "select status from public.nights where id=$1", [n]),
       "closed",
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("Torneos compartidos: normas, margen, exclusión privada y formato único", async () => {
+  const db = await setup();
+  try {
+    const n = await as(db, admin, () =>
+      one(
+        db,
+        "select public.create_tournament('Torneo compartible','2020-01-01','22:00','Respeto y puntualidad.')",
+      ),
+    );
+    await as(db, a, () =>
+      assert.rejects(
+        db.query(
+          "select public.create_tournament('No autorizado','2020-01-01','22:00','Normas')",
+        ),
+      ),
+    );
+    await as(db, admin, () =>
+      assert.rejects(
+        db.query(
+          "select public.create_tournament('Sin normas','2020-01-01','22:00','')",
+        ),
+      ),
+    );
+    const ca = await as(db, a, () =>
+        one(db, "select public.create_my_club('Compartible A',array['111'])"),
+      ),
+      cb = await as(db, b, () =>
+        one(db, "select public.create_my_club('Compartible B',array['222'])"),
+      );
+    await db.exec("set role anon");
+    const pub = (
+      await db.query("select * from public.get_public_tournament($1)", [n])
+    ).rows[0];
+    assert.equal(pub.name, "Torneo compartible");
+    assert(!("contacts" in pub));
+    assert(!("owner_id" in pub));
+    await assert.rejects(db.query("select * from public.nights"));
+    await assert.rejects(db.query("select * from public.club_contacts"));
+    await db.exec("reset role");
+    await as(db, a, async () => {
+      await assert.rejects(
+        db.query("select public.join_tournament($1,false)", [n]),
+      );
+      await assert.rejects(
+        db.query("select public.register_club($1,$2)", [n, ca]),
+      );
+      await db.query("select public.join_tournament($1,true)", [n]);
+      await db.query("select public.join_tournament($1,true)", [n]);
+      await assert.rejects(
+        db.query("select public.extend_tournament_start($1,10)", [n]),
+      );
+    });
+    await as(db, b, () =>
+      db.query("select public.join_tournament($1,true)", [n]),
+    );
+    const before = await as(db, admin, () =>
+      one(
+        db,
+        "select effective_start from public.list_tournaments() where id=$1",
+        [n],
+      ),
+    );
+    await as(db, admin, () =>
+      db.query("select public.extend_tournament_start($1,10)", [n]),
+    );
+    const after = await as(db, admin, () =>
+      one(
+        db,
+        "select effective_start from public.list_tournaments() where id=$1",
+        [n],
+      ),
+    );
+    assert.equal(new Date(after) - new Date(before), 600000);
+    await as(db, admin, () =>
+      db.query(
+        "select public.set_registration_excluded($1,$2,true,'Decisión privada')",
+        [n, ca],
+      ),
+    );
+    await as(db, a, async () => {
+      assert.equal(
+        await one(db, "select reason from public.registration_notices"),
+        "Decisión privada",
+      );
+      await assert.rejects(
+        db.query("select public.join_tournament($1,true)", [n]),
+      );
+    });
+    await as(db, b, async () => {
+      assert.equal(
+        (await db.query("select * from public.registration_notices")).rows
+          .length,
+        0,
+      );
+      await assert.rejects(
+        db.query(
+          "select public.set_registration_excluded($1,$2,true,'No autorizado')",
+          [n, ca],
+        ),
+      );
+    });
+    await as(db, admin, () =>
+      db.query(
+        "select public.set_registration_excluded($1,$2,false,'Readmitido')",
+        [n, ca],
+      ),
+    );
+    assert.equal(
+      Number(
+        await one(
+          db,
+          "select registration_number from public.registrations where night_id=$1 and club_id=$2",
+          [n, ca],
+        ),
+      ),
+      1,
+    );
+    for (const label of ["C", "D"])
+      await as(db, admin, () =>
+        db.query("select public.admin_register_club($1,$2,'{}')", [
+          n,
+          "Compartible " + label,
+        ]),
+      );
+    const ids = (
+      await db.query(
+        "select club_id from public.registrations where night_id=$1 order by registration_number",
+        [n],
+      )
+    ).rows.map((r) => r.club_id);
+    const t = { id: "only", size: 4, format: "liga", clubIds: ids };
+    await as(db, admin, () =>
+      assert.rejects(
+        db.query("select public.confirm_plan($1,$2)", [
+          n,
+          JSON.stringify([t, { ...t, id: "second" }]),
+        ]),
+      ),
+    );
+    await as(db, admin, () =>
+      db.query("select public.confirm_plan($1,$2)", [n, JSON.stringify([t])]),
+    );
+    await as(db, admin, () =>
+      assert.rejects(
+        db.query("select public.extend_tournament_start($1,10)", [n]),
+      ),
+    );
+    const split = await as(db, admin, () =>
+      one(
+        db,
+        "select public.create_tournament('No dividir','2020-01-01','22:00','Normas')",
+      ),
+    );
+    const eight = [];
+    for (let i = 0; i < 8; i++)
+      eight.push(
+        await as(db, admin, () =>
+          one(db, "select (public.admin_register_club($1,$2,'{}')).club_id", [
+            split,
+            "Ocho " + i,
+          ]),
+        ),
+      );
+    await as(db, admin, () =>
+      assert.rejects(
+        db.query("select public.confirm_plan($1,$2)", [
+          split,
+          JSON.stringify([
+            { id: "one", size: 4, format: "copa", clubIds: eight.slice(0, 4) },
+            { id: "two", size: 4, format: "copa", clubIds: eight.slice(4) },
+          ]),
+        ]),
+      ),
+    );
+    const future = await as(db, admin, () =>
+      one(
+        db,
+        "select public.create_tournament('Futuro',(current_date+1)::date,'22:00','Normas')",
+      ),
+    );
+    const futureIds = [];
+    for (let i = 0; i < 4; i++)
+      futureIds.push(
+        await as(db, admin, () =>
+          one(db, "select (public.admin_register_club($1,$2,'{}')).club_id", [
+            future,
+            "Futuro " + i,
+          ]),
+        ),
+      );
+    await as(db, admin, () =>
+      assert.rejects(
+        db.query("select public.confirm_plan($1,$2)", [
+          future,
+          JSON.stringify([
+            { id: "f", size: 4, format: "copa", clubIds: futureIds },
+          ]),
+        ]),
+      ),
+    );
+  } finally {
+    await db.close();
+  }
+});
+test("Baneos: acceso restringido con sesión existente y readmisión explícita", async () => {
+  const db = await setup();
+  try {
+    const n = await as(db, admin, () =>
+      one(
+        db,
+        "select public.create_tournament('Moderación','2020-01-01','22:00','Normas')",
+      ),
+    );
+    const club = await as(db, a, () =>
+      one(db, "select public.create_my_club('Moderado','{}')"),
+    );
+    await as(db, a, () =>
+      db.query("select public.join_tournament($1,true)", [n]),
+    );
+    await as(db, b, () =>
+      assert.rejects(
+        db.query("select public.set_member_ban($1,true,'Sin permiso')", [a]),
+      ),
+    );
+    await as(db, admin, () =>
+      assert.rejects(
+        db.query("select public.set_member_ban($1,true,'Autobaneo')", [admin]),
+      ),
+    );
+    await as(db, admin, () =>
+      db.query("select public.set_member_ban($1,true,'Suspensión de prueba')", [
+        a,
+      ]),
+    );
+    await as(db, a, async () => {
+      assert.equal(
+        await one(db, "select is_banned from public.profiles where id=$1", [a]),
+        true,
+      );
+      for (const table of ["nights", "clubs", "club_contacts", "registrations"])
+        assert.equal(
+          (await db.query("select * from public." + table)).rows.length,
+          0,
+        );
+      await assert.rejects(
+        db.query("select public.join_tournament($1,true)", [n]),
+      );
+      await assert.rejects(
+        db.query("select public.update_my_contacts(array['222'])"),
+      );
+      await assert.rejects(
+        db.query("select public.create_my_club('Otro','{}')"),
+      );
+    });
+    assert.equal(
+      await one(
+        db,
+        "select excluded from public.registrations where night_id=$1 and club_id=$2",
+        [n, club],
+      ),
+      true,
+    );
+    await as(db, admin, () =>
+      db.query("select public.set_member_ban($1,false,'Fin de suspensión')", [
+        a,
+      ]),
+    );
+    await as(db, a, () =>
+      assert.rejects(db.query("select public.join_tournament($1,true)", [n])),
+    );
+    await as(db, admin, () =>
+      db.query(
+        "select public.set_registration_excluded($1,$2,false,'Readmitido')",
+        [n, club],
+      ),
+    );
+    await as(db, a, () =>
+      db.query("select public.join_tournament($1,true)", [n]),
     );
   } finally {
     await db.close();

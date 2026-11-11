@@ -2,17 +2,31 @@ import React, { useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { supabase } from "../cloud/client";
 import { useAuth } from "../cloud/AuthProvider";
-import type { Club, Data, Night } from "../domain/tournaments";
+import type { Club, Data, Night, Tournament } from "../domain/tournaments";
 import { emptyData } from "../domain/tournaments";
-import { C, Context } from "./context";
+import { useTournamentLink } from "../cloud/links";
+import { C, Context, Member } from "./context";
+type TournamentRow = {
+  id: string;
+  name: string;
+  play_date: string;
+  start_time: string;
+  tournaments: Tournament[];
+  rules: string;
+  grace_minutes: number;
+  effective_start: string;
+};
 type ClubRow = { id: string; name: string; owner_id: string | null };
 type RegistrationRow = {
   night_id: string;
   club_id: string;
   registration_number: number;
   registered_at: string;
+  id: string;
+  excluded: boolean;
 };
 export function CloudProvider({ children }: { children: React.ReactNode }) {
+  const initialId = useTournamentLink();
   const { session, profile } = useAuth(),
     [data, setData] = useState<Data>(emptyData),
     [myClub, setMyClub] = useState<Club>(),
@@ -26,16 +40,18 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     const attempt = ++request.current;
     try {
       const results = await Promise.all([
-        supabase
-          .from("nights")
-          .select("id,name,play_date,start_time,status,tournaments")
-          .order("created_at"),
+        supabase.rpc("list_tournaments"),
         supabase.from("clubs").select("id,name,owner_id"),
         supabase
           .from("registrations")
-          .select("night_id,club_id,registration_number,registered_at")
+          .select(
+            "id,night_id,club_id,registration_number,registered_at,excluded",
+          )
           .order("registration_number"),
         supabase.from("club_contacts").select("club_id,phones"),
+        supabase
+          .from("registration_notices")
+          .select("registration_id,reason,excluded"),
       ]);
       const failed = results.find((r) => r.error);
       if (failed?.error)
@@ -54,24 +70,38 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
         contacts: contacts.get(c.id) || [],
         captainId: c.owner_id,
       });
-      const nights: Night[] = (results[0].data || []).map((n) => ({
-        id: n.id,
-        name: n.name,
-        date: n.play_date,
-        time: n.start_time.slice(0, 5),
-        tournaments: n.tournaments,
-        clubs: regs
-          .filter((r) => r.night_id === n.id)
-          .map((r) => {
-            const c = clubs.find((c) => c.id === r.club_id);
-            if (!c) throw new Error("No se pudo leer un club inscrito.");
-            return {
-              ...mapClub(c),
-              registrationOrder: Number(r.registration_number),
-              registeredAt: r.registered_at,
-            };
-          }),
-      }));
+      const notices = new Map(
+        (results[4].data || []).map((n) => [
+          n.registration_id,
+          n.reason as string,
+        ]),
+      );
+      const nights: Night[] = ((results[0].data || []) as TournamentRow[]).map(
+        (n) => ({
+          id: n.id,
+          name: n.name,
+          date: n.play_date,
+          time: n.start_time.slice(0, 5),
+          tournaments: n.tournaments,
+          rules: n.rules,
+          graceMinutes: n.grace_minutes,
+          effectiveStart: n.effective_start,
+          singleTournament: true,
+          clubs: regs
+            .filter((r) => r.night_id === n.id)
+            .map((r) => {
+              const c = clubs.find((c) => c.id === r.club_id);
+              if (!c) throw new Error("No se pudo leer un club inscrito.");
+              return {
+                ...mapClub(c),
+                registrationOrder: Number(r.registration_number),
+                registeredAt: r.registered_at,
+                excluded: r.excluded,
+                exclusionReason: notices.get(r.id),
+              };
+            }),
+        }),
+      );
       const own = clubs.find((c) => c.owner_id === session.user.id);
       setMyClub(own ? mapClub(own) : undefined);
       setData((d) => ({
@@ -79,7 +109,8 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
         nights,
         activeId: nights.some((n) => n.id === d.activeId)
           ? d.activeId
-          : nights.find((n) => !n.tournaments.length)?.id ||
+          : nights.find((n) => n.id === initialId)?.id ||
+            nights.find((n) => !n.tournaments.length)?.id ||
             nights[0]?.id ||
             null,
       }));
@@ -112,7 +143,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   }, [session?.user.id, profile?.role]);
   async function rpc(name: string, args: Record<string, unknown>) {
     if (!supabase || !session) throw new Error("Inicia sesión.");
-    const { error } = await supabase.rpc(name, args);
+    const { data: result, error } = await supabase.rpc(name, args);
     if (error) {
       if (error.code === "23505")
         throw new Error(
@@ -127,10 +158,11 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
         "La operación se ha guardado, pero la lista no pudo actualizarse. Pulsa Actualizar antes de repetirla.",
       );
     }
+    return result;
   }
   const active = data.nights.find((n) => n.id === data.activeId);
   function current() {
-    if (!active) throw new Error("Selecciona una noche.");
+    if (!active) throw new Error("Selecciona un torneo.");
     return active.id;
   }
   const value: Context = {
@@ -144,11 +176,44 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     refresh,
     select: async (id) => {
       if (!data.nights.some((n) => n.id === id))
-        throw new Error("Noche no encontrada.");
+        throw new Error("Torneo no encontrado.");
       setData((d) => ({ ...d, activeId: id }));
     },
-    createNight: (name, date, time) =>
-      rpc("create_night", { p_name: name.trim(), p_date: date, p_time: time }),
+    createNight: async (name, date, time, rules = "") => {
+      const id = await rpc("create_tournament", {
+        p_name: name.trim(),
+        p_date: date,
+        p_time: time,
+        p_rules: rules,
+      });
+      setData((d) => ({ ...d, activeId: id }));
+    },
+    extendStart: (minutes) =>
+      rpc("extend_tournament_start", {
+        p_tournament_id: current(),
+        p_minutes: minutes,
+      }),
+    setExcluded: (id, excluded, reason) =>
+      rpc("set_registration_excluded", {
+        p_tournament_id: current(),
+        p_club_id: id,
+        p_excluded: excluded,
+        p_reason: reason,
+      }),
+    listMembers: async () => {
+      const { data, error } = await supabase!
+        .from("profiles")
+        .select("id,ea_id,role,is_banned,ban_reason")
+        .order("ea_id");
+      if (error) throw new Error("No se pudieron cargar los capitanes.");
+      return data as Member[];
+    },
+    setMemberBan: (id, banned, reason) =>
+      rpc("set_member_ban", {
+        p_member_id: id,
+        p_banned: banned,
+        p_reason: reason,
+      }),
     addClub: (name, contacts) =>
       rpc("admin_register_club", {
         p_night_id: current(),
@@ -156,7 +221,12 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
         p_contacts: contacts.map((c) => c.trim()).filter(Boolean),
       }),
     removeClub: (id) =>
-      rpc("remove_registration", { p_night_id: current(), p_club_id: id }),
+      rpc("set_registration_excluded", {
+        p_tournament_id: current(),
+        p_club_id: id,
+        p_excluded: true,
+        p_reason: "Club fuera por decisión de la organización.",
+      }),
     confirmPlan: (plan) =>
       rpc("confirm_plan", { p_night_id: current(), p_plan: plan }),
     saveMyClub: (name, contacts) =>
@@ -168,11 +238,11 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
       rpc("update_my_contacts", {
         p_contacts: contacts.map((c) => c.trim()).filter(Boolean),
       }),
-    registerMyClub: () => {
+    registerMyClub: (acceptRules = false) => {
       if (!myClub) throw new Error("Crea o vincula tu club primero.");
-      return rpc("register_club", {
-        p_night_id: current(),
-        p_club_id: myClub.id,
+      return rpc("join_tournament", {
+        p_tournament_id: current(),
+        p_accept_rules: acceptRules,
       });
     },
     assignCaptain: (clubId, eaId) =>
