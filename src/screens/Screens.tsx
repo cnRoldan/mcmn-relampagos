@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Text, View, Pressable, ActivityIndicator } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import * as Crypto from "expo-crypto";
 import { useApp } from "../state/AppState";
@@ -15,7 +15,8 @@ import {
 } from "../components/UI";
 import { colors, styles as s } from "../theme";
 import { format, roundRobin, Size, Tournament } from "../domain/tournaments";
-import type { Routes } from "../navigation";
+import type { RouteProp } from "@react-navigation/native";
+import type { Routes, TournamentSection } from "../navigation";
 const message = (e: unknown) =>
   e instanceof Error
     ? e.message
@@ -96,7 +97,7 @@ export function Home() {
         <Button
           label={night ? "Gestionar la noche →" : "Crear mi primera noche →"}
           accent
-          onPress={() => nav.navigate("Noches")}
+          onPress={() => nav.navigate("Torneos", { section: "Noches" })}
         />
       </View>
       <View style={s.row}>
@@ -121,7 +122,7 @@ export function Home() {
           "01",
           "Reúne a tu comunidad",
           "Inscribe clubes sin registrar jugadores ni plantillas.",
-          "Clubes",
+          "Inscritos",
         ],
         [
           "02",
@@ -133,13 +134,17 @@ export function Home() {
         <Pressable
           key={num}
           accessibilityRole="button"
-          onPress={() => nav.navigate(route as keyof Routes)}
+          onPress={() =>
+            nav.navigate("Torneos", { section: route as TournamentSection })
+          }
           style={[
             s.card,
             { flexDirection: "row", gap: 15, alignItems: "center" },
           ]}
         >
-          <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "800" }}>
+          <Text
+            style={{ color: colors.primary, fontSize: 22, fontWeight: "800" }}
+          >
             {num}
           </Text>
           <View style={{ flex: 1, gap: 5 }}>
@@ -310,7 +315,10 @@ export function Clubs() {
     >
       <Status />
       {!night ? (
-        <Button label="Ir a Noches" onPress={() => nav.navigate("Noches")} />
+        <Button
+          label="Ir a Noches"
+          onPress={() => nav.navigate("Torneos", { section: "Noches" })}
+        />
       ) : (
         <>
           {!night.tournaments.length ? (
@@ -452,7 +460,9 @@ export function Tournaments() {
     nav = useNavigation<DrawerNavigationProp<Routes>>(),
     [planning, setPlanning] = useState(false),
     [counts, setCounts] = useState<Record<Size, number>>({ 4: 0, 6: 0, 8: 0 }),
-    [method, setMethod] = useState<"random" | "order" | "manual" | null>("random"),
+    [method, setMethod] = useState<"random" | "order" | "manual" | null>(
+      "random",
+    ),
     [draft, setDraft] = useState<Tournament[] | null>(null),
     [err, setErr] = useState(""),
     [busy, setBusy] = useState(false),
@@ -492,7 +502,10 @@ export function Tournaments() {
     >
       <Status />
       {!night ? (
-        <Button label="Ir a Noches" onPress={() => nav.navigate("Noches")} />
+        <Button
+          label="Ir a Noches"
+          onPress={() => nav.navigate("Torneos", { section: "Noches" })}
+        />
       ) : (
         <>
           {!night.tournaments.length ? (
@@ -817,6 +830,103 @@ export function Settings() {
         danger
         onConfirm={reset}
       />
+    </Page>
+  );
+}
+
+export function TournamentHub() {
+  const nav = useNavigation<DrawerNavigationProp<Routes>>();
+  const route = useRoute<RouteProp<Routes, "Torneos">>();
+  const section = route.params?.section ?? "Noches";
+  return (
+    <View style={s.page}>
+      <View
+        accessibilityRole="tablist"
+        style={{
+          flexDirection: "row",
+          padding: 12,
+          gap: 6,
+          borderBottomWidth: 1,
+          borderColor: colors.line,
+        }}
+      >
+        {(["Noches", "Inscritos", "Relámpagos"] as const).map((tab) => (
+          <Pressable
+            key={tab}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: section === tab }}
+            onPress={() => nav.setParams({ section: tab })}
+            style={{
+              flex: 1,
+              minHeight: 48,
+              justifyContent: "center",
+              alignItems: "center",
+              borderRadius: 10,
+              backgroundColor: section === tab ? colors.primary : colors.soft,
+            }}
+          >
+            <Text
+              style={{
+                color: section === tab ? colors.white : colors.softInk,
+                fontSize: 13,
+                fontWeight: "700",
+              }}
+            >
+              {tab}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      {section === "Noches" ? (
+        <Nights />
+      ) : section === "Inscritos" ? (
+        <Clubs />
+      ) : (
+        <Tournaments />
+      )}
+    </View>
+  );
+}
+export function MyClub() {
+  const nav = useNavigation<DrawerNavigationProp<Routes>>();
+  return (
+    <Page title="Mi Club" subtitle="Tu equipo dentro de la comunidad.">
+      <View style={s.card}>
+        <Text style={s.heading}>Todavía no hay un club vinculado</Text>
+        <Text style={s.subtitle}>
+          Aquí podrás consultar el club asociado a tu cuenta cuando se habilite
+          el acceso de capitanes.
+        </Text>
+      </View>
+      <Note>
+        La vinculación entre cuentas y clubes está pendiente de definir. Los
+        clubes inscritos en una noche se gestionan desde Torneos.
+      </Note>
+      <Button
+        label="Ver clubes inscritos"
+        onPress={() => nav.navigate("Torneos", { section: "Inscritos" })}
+      />
+    </Page>
+  );
+}
+export function Honours() {
+  return (
+    <Page
+      title="Palmarés"
+      subtitle="La historia de los campeones de la comunidad."
+    >
+      <View style={s.card}>
+        <Badge>SIN TÍTULOS REGISTRADOS</Badge>
+        <Text style={s.heading}>El primer campeón está por llegar</Text>
+        <Text style={s.subtitle}>
+          Aquí aparecerán los títulos cuando los torneos tengan un campeón
+          confirmado.
+        </Text>
+      </View>
+      <Note>
+        El registro de campeones se incorporará junto con los resultados y las
+        reglas de clasificación.
+      </Note>
     </Page>
   );
 }

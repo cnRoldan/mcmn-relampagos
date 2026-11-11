@@ -15,9 +15,9 @@ import { StatusBar } from "expo-status-bar";
 import { Provider } from "./src/state/AppState";
 import {
   Home,
-  Nights,
-  Clubs,
-  Tournaments,
+  TournamentHub,
+  MyClub,
+  Honours,
   Settings,
 } from "./src/screens/Screens";
 import { colors } from "./src/theme";
@@ -60,7 +60,9 @@ function SideMenu(props: DrawerContentComponentProps) {
         <Text style={{ color: colors.accent, fontSize: 12 }}>
           ● Panel del organizador
         </Text>
-        <Text style={{ color: colors.onDarkMuted, fontSize: 11, lineHeight: 17 }}>
+        <Text
+          style={{ color: colors.onDarkMuted, fontSize: 11, lineHeight: 17 }}
+        >
           Versión inicial · datos locales{`\n`}Nombre provisional
         </Text>
       </View>
@@ -114,17 +116,9 @@ export default function App() {
                 component={Home}
                 options={{ title: "Inicio" }}
               />
-              <Drawer.Screen
-                name="Noches"
-                component={Nights}
-                options={{ title: "Noches de juego" }}
-              />
-              <Drawer.Screen
-                name="Clubes"
-                component={Clubs}
-                options={{ title: "Clubes inscritos" }}
-              />
-              <Drawer.Screen name="Relámpagos" component={Tournaments} />
+              <Drawer.Screen name="Torneos" component={TournamentHub} />
+              <Drawer.Screen name="Mi Club" component={MyClub} />
+              <Drawer.Screen name="Palmarés" component={Honours} />
               <Drawer.Screen name="Ajustes" component={Settings} />
             </Drawer.Navigator>
           </NavigationContainer>
