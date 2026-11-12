@@ -20,7 +20,7 @@ Las RPCs usan `SECURITY DEFINER` de forma intencional, fijan `search_path` vací
 
 ## Validación
 
-Treinta y dos pruebas pasan, incluidas diez suites de PostgreSQL sobre RLS, formatos, normas, margen, exclusiones y baneos. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
+Treinta y nueve pruebas pasan, incluidas once suites de PostgreSQL sobre RLS, formatos, normas, margen, exclusiones y baneos. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
 
 La revisión automática rechazó crear usuarios QA directamente en Auth y elevar uno a administrador. No se crearon esos usuarios ni se intentó eludir el bloqueo. Por tanto, falta verificar un inicio de sesión válido y una inscripción con cuentas reales después de registrar al propietario.
 
@@ -70,3 +70,15 @@ Los torneos finalizados se consultan pero sus marcadores no se editan. Reiniciar
 `prepare_account_deletion(uuid)` es exclusiva de servicio. La función Edge `account-delete` obtiene el usuario de un JWT verificado, exige la contraseña actual de ese mismo usuario, limita intentos, prepara el borrado, revoca todas las sesiones y ejecuta `admin.deleteUser(id,false)`. No acepta IDs o correos objetivo del cuerpo. `verify_jwt=false` en la puerta de Edge se debe a esta autenticación explícita; la autorización siempre se verifica dentro. Un error después de preparar devuelve 503 con estado pendiente, nunca éxito, y admite reintento. No hay almacenamiento de archivos de usuario que impida actualmente el borrado de Auth.
 
 Se permite a las cuentas suspendidas iniciar sesión para acceder a la política y la supresión; los helpers de permisos y RLS siguen denegando sus datos privados y operaciones deportivas. El cliente elimina la sesión local al completar la supresión. Las pruebas HTTP verifican credenciales, suplantación por cuerpo, límites y fallos parciales. Las pruebas PostgreSQL comprueban el borrado de datos activos y los históricos conservados, sin eliminar usuarios reales del servidor.
+
+## Escudos y edición
+
+`club_badges` crea el bucket privado `club-badges` con PNG/JPEG y límite de 2 MB, añade `badge_path` y `club_version`, y permite a usuarios activos leer solamente objetos referenciados por clubes no eliminados. No se concede escritura directa del cliente. Se conserva la transparencia; la función no transforma el archivo y rechaza SVG y archivos de imagen inválidos.
+
+Las RPCs de edición y borrado con escudo son exclusivas de servicio y fijan `search_path` vacío. Verifican perfil activo, dueño, ruta del escudo, existencia del objeto y versión del club. `begin_club_operation` reserva una operación por perfil con caducidad de diez minutos y liberación al terminar; la preparación de supresión de cuenta comprueba la misma reserva. Evita purgar imágenes mientras una subida está en curso. La edición de contactos antigua también incrementa la versión del club.
+
+`club-profile` autentica un JWT con `getUser`; nunca acepta un propietario objetivo del cuerpo. Sube el archivo con una ruta UUID dentro de la carpeta del usuario y realiza la actualización del club con el token de operación. Si la actualización falla, intenta retirar el nuevo archivo. Tras guardar purga los archivos sobrantes, conservando solo el escudo actual. Las imágenes se borran siempre con Storage API, nunca mediante DELETE en `storage.objects`.
+
+La eliminación directa antigua `delete_my_club` deja de estar concedida al cliente: la nueva función Edge comprueba el nombre y limpia Storage antes de llamar a `delete_club_profile`. `account-delete` prepara el bloqueo, purga toda la carpeta y solo después revoca sesiones y elimina Auth. Si falla Storage devuelve estado pendiente sin eliminar Auth, permitiendo reintentar. Los registros históricos quedan sin ruta de escudo.
+
+Las pruebas de permisos de Storage usan una réplica mínima del esquema de Storage en PostgreSQL aislado; no crean usuarios privilegiados en el servidor. También se comprueban los bytes originales de un PNG transparente, reemplazo, retirada, errores de guardado y limpieza, conservación de inscripciones y rechazo de escrituras o rutas ajenas.

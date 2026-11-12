@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { purgeBadgeFiles } from "../_shared/badges.ts";
 import { handleAccountDeletion } from "./handler.ts";
 // The body authenticates the current user and rechecks the password. No service
 // credential or caller-chosen target ID is ever sent to the client.
@@ -48,6 +49,7 @@ Deno.serve((req: Request) => {
       });
       if (error) throw error;
     },
+    purgeFiles: (id) => purgeBadgeFiles(admin.storage, id),
     revoke: async (token) => {
       const { error } = await admin.auth.admin.signOut(token, "global");
       if (error) throw error;

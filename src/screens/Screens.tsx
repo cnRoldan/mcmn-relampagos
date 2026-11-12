@@ -21,6 +21,9 @@ import {
   currentTournament,
   tournamentState,
 } from "../domain/currentTournament";
+import { ClubBadge } from "../components/ClubBadge";
+import { pickBadge } from "../cloud/pickBadge";
+import type { BadgeSelection } from "../domain/badges";
 import { DeleteAccount } from "../components/DeleteAccount";
 import { DeleteClub } from "../components/DeleteClub";
 import { PrivacyPolicyButton } from "../components/PrivacyPolicy";
@@ -165,6 +168,7 @@ export function Home() {
           {clubs.map((club, i) => (
             <View key={club.id} style={s.card}>
               <View style={s.row}>
+                <ClubBadge uri={club.badgeUrl} name={club.name} size={36} />
                 <Text style={[s.heading, { flex: 1 }]}>{club.name}</Text>
                 {club.id === myClub?.id && <Badge>TU CLUB</Badge>}
               </View>
@@ -260,12 +264,14 @@ export function Settings() {
 }
 
 export function MyClub() {
-  const { mode, myClub, saveMyClub, updateContacts, night } = useApp();
+  const { mode, myClub, saveMyClub, updateMyClub, night } = useApp();
   const { profile } = useAuth();
   const nav = useNavigation<DrawerNavigationProp<Routes>>();
   const [editing, setEditing] = useState(false),
     [name, setName] = useState(""),
     [contacts, setContacts] = useState(["", "", ""]),
+    [badge, setBadge] = useState<BadgeSelection | null | undefined>(undefined),
+    [picking, setPicking] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const registration = myClub
@@ -291,6 +297,7 @@ export function MyClub() {
         <>
           <View style={s.card}>
             <Badge>TU CLUB</Badge>
+            <ClubBadge uri={myClub.badgeUrl} name={myClub.name} size={96} />
             <Text style={s.heading}>{myClub.name}</Text>
             <Text style={s.subtitle}>
               WhatsApp del club · visible para los capitanes inscritos en tu
@@ -309,8 +316,10 @@ export function MyClub() {
             )}
             <Button
               secondary
-              label="Editar WhatsApp"
+              label="Editar mi club"
               onPress={() => {
+                setName(myClub.name);
+                setBadge(undefined);
                 setContacts([0, 1, 2].map((i) => myClub.contacts[i] || ""));
                 setError("");
                 setEditing(true);
@@ -379,6 +388,7 @@ export function MyClub() {
             label="Crear mi club"
             onPress={() => {
               setName("");
+              setBadge(undefined);
               setContacts(["", "", ""]);
               setError("");
               setEditing(true);
@@ -397,15 +407,50 @@ export function MyClub() {
       )}
       {editing && (
         <Sheet
-          title={myClub ? "Contactos de mi club" : "Crear mi club"}
+          title={myClub ? "Editar mi club" : "Crear mi club"}
           onClose={() => !busy && setEditing(false)}
         >
-          {!myClub && (
-            <Field
-              label="Nombre del club"
-              value={name}
-              onChangeText={setName}
-              maxLength={50}
+          <Field
+            label="Nombre del club"
+            value={name}
+            onChangeText={setName}
+            maxLength={50}
+          />
+          <View style={{ gap: 12, alignItems: "flex-start" }}>
+            <Text style={s.heading}>Escudo del club · opcional</Text>
+            <ClubBadge
+              uri={badge === undefined ? myClub?.badgeUrl : badge?.uri}
+              name={name || "Mi club"}
+              size={96}
+            />
+          </View>
+          <Text style={s.subtitle}>
+            PNG con transparencia o JPG. Máximo 2 MB y 4096 × 4096 píxeles. La
+            imagen se conserva sin recortar ni añadir fondo.
+          </Text>
+          <Button
+            secondary
+            label={picking ? "Abriendo imágenes…" : "Seleccionar escudo"}
+            disabled={busy || picking}
+            onPress={async () => {
+              setPicking(true);
+              setError("");
+              try {
+                const selected = await pickBadge();
+                if (selected) setBadge(selected);
+              } catch (e) {
+                setError(message(e));
+              } finally {
+                setPicking(false);
+              }
+            }}
+          />
+          {(badge || (badge === undefined && myClub?.badgeUrl)) && (
+            <Button
+              secondary
+              label="Quitar escudo"
+              disabled={busy || picking}
+              onPress={() => setBadge(null)}
             />
           )}
           <Note>
@@ -437,13 +482,14 @@ export function MyClub() {
           )}
           <Button
             label={busy ? "Guardando…" : "Guardar"}
-            disabled={busy}
+            disabled={busy || picking || !name.trim()}
             onPress={async () => {
               setBusy(true);
               setError("");
               try {
-                if (myClub) await updateContacts(contacts);
-                else await saveMyClub(name, contacts);
+                const image = badge ? { base64: badge.base64 } : badge;
+                if (myClub) await updateMyClub(name, contacts, image);
+                else await saveMyClub(name, contacts, image);
                 setEditing(false);
               } catch (e) {
                 setError(message(e));

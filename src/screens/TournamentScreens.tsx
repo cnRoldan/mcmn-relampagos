@@ -13,6 +13,7 @@ import {
   Sheet,
   Confirm,
 } from "../components/UI";
+import { ClubBadge } from "../components/ClubBadge";
 import { CompetitionBoard } from "../components/CompetitionBoard";
 import { WhatsAppContact } from "../components/WhatsAppContact";
 import { normalizePhone } from "../domain/contacts";
@@ -556,6 +557,7 @@ function TournamentRegistrations() {
       {n.clubs.map((c, i) => (
         <View key={c.id} style={[s.card, c.excluded && { opacity: 0.75 }]}>
           <View style={s.row}>
+            <ClubBadge uri={c.badgeUrl} name={c.name} size={36} />
             <Text style={[s.heading, { flex: 1 }]}>{c.name}</Text>
             <Badge>
               {c.excluded ? "FUERA" : closed ? "PARTICIPANTE" : "INSCRITO"}

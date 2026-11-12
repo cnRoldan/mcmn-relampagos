@@ -1,3 +1,4 @@
+import type { BadgeInput } from "../domain/badges";
 import type { Match, Score } from "../domain/results";
 import { createContext } from "react";
 import type { Data, Night, Club, Tournament } from "../domain/tournaments";
@@ -7,7 +8,16 @@ export type Context = {
   myClub: Club | undefined;
   refresh: () => Promise<void>;
   deleteMyClub: (confirmation: string) => Promise<void>;
-  saveMyClub: (name: string, contacts: string[]) => Promise<void>;
+  saveMyClub: (
+    name: string,
+    contacts: string[],
+    badge?: BadgeInput | null,
+  ) => Promise<void>;
+  updateMyClub: (
+    name: string,
+    contacts: string[],
+    badge?: BadgeInput | null,
+  ) => Promise<void>;
   updateContacts: (contacts: string[]) => Promise<void>;
   registerMyClub: (acceptRules?: boolean) => Promise<void>;
   assignCaptain: (clubId: string, eaId: string) => Promise<void>;

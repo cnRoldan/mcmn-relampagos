@@ -127,3 +127,16 @@ test("Cuenta: rechaza credenciales que resuelvan a otra identidad y peticiones i
     400,
   );
 });
+
+test("Cuenta: si falla la limpieza de escudos, queda pendiente y no borra Auth", async () => {
+  const f = fixture();
+  f.services.purgeFiles = async () => {
+    throw new Error("storage unavailable");
+  };
+  const response = await handleAccountDeletion(f.req(), f.services);
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).pending, true);
+  assert(
+    !f.calls.some((c) => c.startsWith("remove:") || c.startsWith("revoke:")),
+  );
+});

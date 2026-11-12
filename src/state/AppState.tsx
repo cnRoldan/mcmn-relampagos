@@ -106,6 +106,9 @@ function LocalProvider({ children }: { children: React.ReactNode }) {
     saveMyClub: async () => {
       throw new Error("Conecta el servidor para vincular tu club.");
     },
+    updateMyClub: async () => {
+      throw new Error("La edición requiere el servidor.");
+    },
     updateContacts: async () => {
       throw new Error("Conecta el servidor.");
     },

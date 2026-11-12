@@ -19,6 +19,9 @@ async function setup() {
   await db.exec(
     `create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth,public to anon,authenticated,service_role;`,
   );
+  await db.exec(
+    `create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,owner_id text,metadata jsonb);alter table storage.objects enable row level security;grant usage on schema storage to anon,authenticated,service_role;grant select on storage.objects to authenticated;`,
+  );
   await db.exec(SQL);
   for (const [id, ea] of [
     [admin, "MCMN Relámpagos"],
@@ -1079,8 +1082,22 @@ test("Privacidad: eliminar solo mi club retira inscripciones abiertas sin renume
         db.query("select public.prepare_account_deletion($1)", [b]),
       );
       await assert.rejects(db.query("select public.erase_owned_club($1)", [b]));
-      await db.query("select public.delete_my_club('Borrable')");
+      await assert.rejects(
+        db.query("select public.delete_my_club('Borrable')"),
+      );
     });
+    await db.exec("set role service_role");
+    const operation = await one(
+      db,
+      "select public.begin_club_operation($1,true)",
+      [a],
+    );
+    await db.query("select public.delete_club_profile($1,$2,'Borrable')", [
+      a,
+      operation,
+    ]);
+    await db.query("select public.end_club_operation($1,$2)", [a, operation]);
+    await db.exec("reset role");
     assert.equal(
       await one(db, "select count(*)::int from public.clubs where id=$1", [ca]),
       0,
@@ -1313,6 +1330,151 @@ test("Privacidad: borrar cuenta conserva partidos y bloquea tokens anteriores de
         0,
       ),
     );
+  } finally {
+    await db.close();
+  }
+});
+
+test("Club: edición de nombre y escudo conserva identidad, orden y permisos privados", async () => {
+  const db = await setup();
+  try {
+    const club = await as(db, a, () =>
+      one(
+        db,
+        "select public.create_my_club('Nombre inicial',array['+34611111111'])",
+      ),
+    );
+    const other = await as(db, b, () =>
+      one(
+        db,
+        "select public.create_my_club('Nombre ocupado',array['+34622222222'])",
+      ),
+    );
+    const n = await as(db, admin, () =>
+      one(
+        db,
+        "select public.create_tournament('Editar club','2020-01-01','22:00','Normas')",
+      ),
+    );
+    await as(db, a, () =>
+      db.query("select public.join_tournament($1,true)", [n]),
+    );
+    const path = `${a}/11111111-1111-4111-8111-111111111111.png`,
+      orphan = `${b}/22222222-2222-4222-8222-222222222222.png`;
+    for (const file of [path, orphan])
+      await db.query(
+        "insert into storage.objects(bucket_id,name) values('club-badges',$1)",
+        [file],
+      );
+    await as(db, a, async () => {
+      await assert.rejects(
+        db.query("select public.begin_club_operation($1,false)", [a]),
+      );
+      await assert.rejects(
+        db.query("update public.clubs set name=$1 where id=$2", [
+          "Robado",
+          other,
+        ]),
+      );
+      await assert.rejects(
+        db.query(
+          "insert into storage.objects(bucket_id,name) values('club-badges',$1)",
+          [path + "extra"],
+        ),
+      );
+      assert.equal(
+        (await db.query("select * from storage.objects")).rows.length,
+        0,
+      );
+    });
+    await db.exec("set role service_role");
+    const token = await one(
+      db,
+      "select public.begin_club_operation($1,false)",
+      [a],
+    );
+    await assert.rejects(
+      db.query("select public.begin_club_operation($1,false)", [a]),
+    );
+    await assert.rejects(
+      db.query("select public.prepare_account_deletion($1)", [a]),
+    );
+    await assert.rejects(
+      db.query(
+        "select public.save_club_profile($1,null,'No lease',array['+34611111111'],$2,0)",
+        [a, path],
+      ),
+    );
+    await assert.rejects(
+      db.query(
+        "select public.save_club_profile($1,$2,'Cross path',array['+34611111111'],$3,0)",
+        [a, token, orphan],
+      ),
+    );
+    await assert.rejects(
+      db.query(
+        "select public.save_club_profile($1,$2,'Nombre ocupado',array['+34611111111'],$3,0)",
+        [a, token, path],
+      ),
+    );
+    assert.equal(
+      await one(
+        db,
+        "select public.save_club_profile($1,$2,'Nombre editado',array['+34611111111'],$3,0)",
+        [a, token, path],
+      ),
+      club,
+    );
+    await assert.rejects(
+      db.query(
+        "select public.save_club_profile($1,$2,'Stale',array['+34611111111'],$3,0)",
+        [a, token, path],
+      ),
+    );
+    await db.query("select public.end_club_operation($1,$2)", [a, token]);
+    await db.exec("reset role");
+    assert.equal(
+      await one(db, "select name from public.clubs where id=$1", [club]),
+      "Nombre editado",
+    );
+    assert.equal(
+      Number(
+        await one(
+          db,
+          "select registration_number from public.registrations where club_id=$1",
+          [club],
+        ),
+      ),
+      1,
+    );
+    for (const user of [a, b])
+      await as(db, user, async () => {
+        const rows = (await db.query("select name from storage.objects")).rows;
+        assert.deepEqual(
+          rows.map((r) => r.name),
+          [path],
+        );
+      });
+    await db.query("update public.profiles set is_banned=true where id=$1", [
+      a,
+    ]);
+    await as(db, a, async () =>
+      assert.equal(
+        (await db.query("select * from storage.objects")).rows.length,
+        0,
+      ),
+    );
+    await db.exec("set role service_role");
+    await assert.rejects(
+      db.query("select public.begin_club_operation($1,false)", [a]),
+    );
+    const deleting = await one(
+      db,
+      "select public.begin_club_operation($1,true)",
+      [a],
+    );
+    await db.query("select public.end_club_operation($1,$2)", [a, deleting]);
+    await db.exec("reset role");
   } finally {
     await db.close();
   }

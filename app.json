@@ -23,7 +23,15 @@
     },
     "scheme": "relampagos",
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permite seleccionar una imagen para el escudo de tu club.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

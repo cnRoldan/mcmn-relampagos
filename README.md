@@ -50,6 +50,14 @@ Proyecto Supabase independiente `mkbvplehrbjrufhkcqun`, en la organización eleg
 - La interfaz consulta cambios al entrar, al volver al primer plano, cada 20 segundos y con Actualizar. Los avisos de exclusión se muestran en el torneo y Mi Club. **Push pendiente**, como pidió el usuario; no se envían correos ni mensajes externos.
 - Sesiones nativas en Expo SecureStore; web en almacenamiento local. Cerrar sesión retira el acceso de ese dispositivo y devuelve a la ficha pública si se entró por enlace.
 
+## Nombre y escudo del club
+
+Al crear o editar el club en Mi Club se puede seleccionar un escudo opcional PNG o JPG, de hasta 2 MB y 4096 × 4096 píxeles. El selector lee el archivo original sin recortar ni usar la conversión a JPEG de ImagePicker; conserva los bytes y el canal alfa del PNG. La vista previa usa `contain` y no añade fondo a la imagen. Se puede reemplazar o quitar el escudo, editar el nombre y los teléfonos en el mismo formulario. Se mantienen el ID del club, sus inscripciones y sus resultados.
+
+`club-profile` verifica la sesión y valida firma, formato y tamaño de la imagen en servidor. Supabase Storage guarda los escudos en un bucket privado, sin escritura directa del cliente; los miembros activos obtienen enlaces firmados de 120 segundos solo para escudos actuales. Se generan nombres aleatorios sin utilizar el nombre de archivo original. Cada edición comprueba una versión para evitar sobrescribir cambios simultáneos; una operación del club bloquea temporalmente una eliminación de cuenta hasta terminar.
+
+Al reemplazar o quitar la imagen se intentan retirar los archivos anteriores; las operaciones posteriores vuelven a limpiar los archivos sobrantes si falla Storage. El borrado de club pasa por la función Edge, que borra las imágenes mediante Storage API antes de eliminar o desvincular el club. El borrado de cuenta bloquea nuevas subidas antes de purgar su carpeta y eliminar Auth. Un fallo de limpieza impide anunciar una eliminación completa.
+
 ## Privacidad y eliminación
 
 La política se consulta antes de iniciar sesión y en Ajustes; también está publicada en `/privacidad.html`. Responsable confirmado: Claudio Roldán Ramos. Contacto autorizado por el propietario, tomado del aviso público de ConvoSquad: `convosquad.soporte@gmail.com`. El contenido único está en `src/content/privacy.ts`; `build:web` genera su versión HTML pública sin JavaScript ni seguimiento.

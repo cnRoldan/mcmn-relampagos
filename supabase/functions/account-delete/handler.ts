@@ -8,6 +8,7 @@ export type DeletionServices = {
     password: string,
   ) => Promise<{ id: string; accessToken: string } | null>;
   prepare: (id: string) => Promise<void>;
+  purgeFiles?: (id: string) => Promise<void>;
   revoke: (token: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
 };
@@ -69,6 +70,7 @@ export async function handleAccountDeletion(
     // Never accept a target user ID or an email from the body.
     await services.prepare(user.id);
     prepared = true;
+    await services.purgeFiles?.(user.id);
     await services.revoke(verified.accessToken);
     await services.remove(user.id);
     return reply({ deleted: true });

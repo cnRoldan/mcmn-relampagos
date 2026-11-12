@@ -118,7 +118,13 @@ export function Field({
         placeholder={placeholder}
         placeholderTextColor={colors.placeholder}
         keyboardType={
-          phone ? "phone-pad" : email ? "email-address" : numeric ? "number-pad" : "default"
+          phone
+            ? "phone-pad"
+            : email
+              ? "email-address"
+              : numeric
+                ? "number-pad"
+                : "default"
         }
         secureTextEntry={secure}
         autoCorrect={!(secure || email || autoCapitalize === "none")}

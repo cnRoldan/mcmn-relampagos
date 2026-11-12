@@ -13,6 +13,7 @@ import {
 } from "../domain/results";
 import type { Match, Standing } from "../domain/results";
 import { useApp } from "../state/AppState";
+import { ClubBadge } from "./ClubBadge";
 import { Button, Badge, Field, Note, Sheet, Confirm } from "./UI";
 import { colors, styles as s } from "../theme";
 const errorText = (e: unknown) =>
@@ -20,9 +21,11 @@ const errorText = (e: unknown) =>
 function StandingsTable({
   rows,
   name,
+  badge,
 }: {
   rows: Standing[];
   name: (id: string) => string;
+  badge: (id: string) => string | null | undefined;
 }) {
   const stat = {
     width: 27,
@@ -76,18 +79,32 @@ function StandingsTable({
                 {position}
                 {tied ? "=" : ""}
               </Text>
-              <Text
+              <View
                 style={{
                   flex: 1,
                   minWidth: 90,
-                  paddingRight: 5,
-                  fontSize: 13,
-                  fontWeight: "600",
-                  color: colors.ink,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  paddingRight: 4,
                 }}
               >
-                {name(row.clubId)}
-              </Text>
+                <ClubBadge
+                  uri={badge(row.clubId)}
+                  name={name(row.clubId)}
+                  size={20}
+                />
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.ink,
+                  }}
+                >
+                  {name(row.clubId)}
+                </Text>
+              </View>
               <Text style={stat}>{row.played}</Text>
               <Text
                 style={[stat, { fontWeight: "900", color: colors.primary }]}
@@ -237,7 +254,11 @@ export function CompetitionBoard({
             <Text accessibilityRole="header" style={s.heading}>
               {phaseTitle[g.phase]}
             </Text>
-            <StandingsTable rows={standings(g.ids, groupMatches)} name={name} />
+            <StandingsTable
+              rows={standings(g.ids, groupMatches)}
+              name={name}
+              badge={(id) => n.clubs.find((c) => c.id === id)?.badgeUrl}
+            />
             <Text style={[s.subtitle, { fontSize: 12 }]}>
               PJ: jugados · Pts: puntos · GF: goles a favor · GC: goles en
               contra · DG: diferencia.

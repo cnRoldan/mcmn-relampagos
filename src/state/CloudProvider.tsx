@@ -24,6 +24,8 @@ type ClubRow = {
   name: string;
   owner_id: string | null;
   deleted_at: string | null;
+  badge_path: string | null;
+  club_version: number;
 };
 type RegistrationRow = {
   night_id: string;
@@ -49,7 +51,9 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     try {
       const results = await Promise.all([
         supabase.rpc("list_tournaments_with_status"),
-        supabase.from("clubs").select("id,name,owner_id,deleted_at"),
+        supabase
+          .from("clubs")
+          .select("id,name,owner_id,deleted_at,badge_path,club_version"),
         supabase
           .from("registrations")
           .select(
@@ -79,10 +83,27 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
         contacts = new Map(
           (results[3].data || []).map((c) => [c.club_id, c.phones as string[]]),
         );
+      const badgePaths = clubs
+        .filter((c) => !c.deleted_at && c.badge_path)
+        .map((c) => c.badge_path!);
+      const badgeUrls = new Map<string, string>();
+      if (badgePaths.length) {
+        const { data: urls, error: badgeError } = await supabase.storage
+          .from("club-badges")
+          .createSignedUrls(badgePaths, 120);
+        if (!badgeError)
+          for (const item of urls || [])
+            if (item.path && item.signedUrl)
+              badgeUrls.set(item.path, item.signedUrl);
+      }
+      if (!alive.current || attempt !== request.current) return;
       const mapClub = (c: ClubRow): Club => ({
         id: c.id,
         name: c.deleted_at ? `Club eliminado · ${c.id.slice(0, 6)}` : c.name,
         deletedAt: c.deleted_at,
+        badgePath: c.badge_path,
+        badgeUrl: c.badge_path ? badgeUrls.get(c.badge_path) || null : null,
+        clubVersion: c.club_version ?? 0,
         contacts: contacts.get(c.id) || [],
         captainId: c.owner_id,
       });
@@ -180,6 +201,27 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     }
     return result;
   }
+  async function clubRequest(body: Record<string, unknown>) {
+    if (!supabase || !session) throw new Error("Inicia sesión.");
+    const { data: result, error } = await supabase.functions.invoke(
+      "club-profile",
+      { body },
+    );
+    if (error || !(result?.saved || result?.deleted)) {
+      let message = "No se pudo guardar el club. Inténtalo de nuevo.";
+      try {
+        message = (await error?.context.json())?.error || message;
+      } catch {}
+      throw new Error(message);
+    }
+    try {
+      await refresh();
+    } catch {
+      throw new Error(
+        "El cambio se ha guardado, pero no se pudo actualizar la pantalla. Pulsa Actualizar antes de repetirlo.",
+      );
+    }
+  }
   const active = data.nights.find((n) => n.id === data.activeId);
   function current() {
     if (!active) throw new Error("Selecciona un torneo.");
@@ -273,12 +315,25 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     confirmPlan: (plan) =>
       rpc("confirm_plan", { p_night_id: current(), p_plan: plan }),
     deleteMyClub: (confirmation) =>
-      rpc("delete_my_club", { p_confirmation: confirmation }),
-    saveMyClub: (name, contacts) =>
-      rpc("create_my_club", {
-        p_name: name.trim(),
-        p_contacts: validateContacts(contacts),
+      clubRequest({ action: "delete", confirmation }),
+    saveMyClub: (name, contacts, badge) =>
+      clubRequest({
+        action: "save",
+        name: name.trim(),
+        contacts: validateContacts(contacts),
+        version: null,
+        ...(badge !== undefined ? { badge } : {}),
       }),
+    updateMyClub: (name, contacts, badge) => {
+      if (!myClub) throw new Error("No tienes un club vinculado.");
+      return clubRequest({
+        action: "save",
+        name: name.trim(),
+        contacts: validateContacts(contacts),
+        version: myClub.clubVersion ?? 0,
+        ...(badge !== undefined ? { badge } : {}),
+      });
+    },
     updateContacts: (contacts) =>
       rpc("update_my_contacts", {
         p_contacts: validateContacts(contacts),

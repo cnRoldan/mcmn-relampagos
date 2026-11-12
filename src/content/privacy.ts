@@ -15,7 +15,7 @@ export const privacySections = [
   },
   {
     title: "Datos que tratamos",
-    text: "Guardamos el ID de EA elegido como identificador de acceso, una cuenta interna de autenticación y la contraseña protegida por Supabase Auth; la app no almacena contraseñas en texto plano. No verificamos que seas titular de la cuenta de EA. Guardamos el nombre del club, hasta tres teléfonos con prefijo internacional, inscripciones, aceptación de normas, partidos, resultados y decisiones de moderación. No pedimos nombres reales, documentos, direcciones, ubicación ni cuentas de los jugadores del equipo.",
+    text: "Guardamos el ID de EA elegido como identificador de acceso, una cuenta interna de autenticación y la contraseña protegida por Supabase Auth; la app no almacena contraseñas en texto plano. No verificamos que seas titular de la cuenta de EA. Guardamos el nombre del club, su escudo opcional, hasta tres teléfonos con prefijo internacional, inscripciones, aceptación de normas, partidos, resultados y decisiones de moderación. No pedimos nombres reales, documentos, direcciones, ubicación ni cuentas de los jugadores del equipo. El archivo del escudo se conserva sin recodificar; puede incluir metadatos incorporados al original. Evita añadir datos personales innecesarios a la imagen.",
   },
   {
     title: "Para qué se usan",
@@ -23,7 +23,7 @@ export const privacySections = [
   },
   {
     title: "Quién puede verlos",
-    text: "Los miembros con acceso activo pueden consultar clubes, inscripciones y resultados de la comunidad. Los teléfonos los ven el capitán propietario, los administradores y los capitanes de clubes no excluidos que compartan un torneo no finalizado. Los motivos de exclusión solo son visibles para el capitán afectado y los administradores. El motivo del baneo se muestra a la cuenta afectada y los administradores. Un enlace público muestra nombre, fecha, horario, normas, estado y cantidad de inscritos; no teléfonos ni perfiles.",
+    text: "Los miembros con acceso activo pueden consultar clubes, sus escudos, inscripciones y resultados de la comunidad. Los escudos se guardan en almacenamiento privado y se muestran mediante enlaces temporales. Los teléfonos los ven el capitán propietario, los administradores y los capitanes de clubes no excluidos que compartan un torneo no finalizado. Los motivos de exclusión solo son visibles para el capitán afectado y los administradores. El motivo del baneo se muestra a la cuenta afectada y los administradores. Un enlace público muestra nombre, fecha, horario, normas, estado y cantidad de inscritos; no teléfonos ni perfiles.",
   },
   {
     title: "WhatsApp",
@@ -31,7 +31,7 @@ export const privacySections = [
   },
   {
     title: "Proveedores y ubicación",
-    text: "Supabase presta la autenticación y base de datos; este proyecto utiliza la región eu-west-1 (Irlanda). Netlify aloja la versión web y sus archivos públicos. Estos proveedores pueden procesar datos técnicos, como direcciones IP y registros de acceso, según sus servicios. La distribución web y las operaciones de los proveedores pueden implicar tratamiento fuera de tu país; su documentación recoge las condiciones y salvaguardas aplicables. MCM no utiliza la base de datos de ConvoSquad.",
+    text: "Supabase presta la autenticación, base de datos y almacenamiento de escudos; este proyecto utiliza la región eu-west-1 (Irlanda). Netlify aloja la versión web y sus archivos públicos. Estos proveedores pueden procesar datos técnicos, como direcciones IP y registros de acceso, según sus servicios. La distribución web y las operaciones de los proveedores pueden implicar tratamiento fuera de tu país; su documentación recoge las condiciones y salvaguardas aplicables. MCM no utiliza la base de datos de ConvoSquad.",
   },
   {
     title: "Base del tratamiento",
@@ -39,7 +39,7 @@ export const privacySections = [
   },
   {
     title: "Conservación y eliminación del club",
-    text: "Los datos de cuenta y club se mantienen mientras los utilices. En Mi Club puedes eliminar el club: se borran sus teléfonos, se retiran sus inscripciones en torneos no iniciados y se elimina su vínculo con el capitán. Si tiene historial deportivo se conserva un registro con un nombre genérico y un identificador técnico para no romper partidos, tablas y resultados. Si no tiene historial, se elimina el registro del club. La cuenta sigue disponible para crear otro club.",
+    text: "Los datos de cuenta y club se mantienen mientras los utilices. En Mi Club puedes eliminar el club: se borran sus teléfonos e imágenes guardadas, se retiran sus inscripciones en torneos no iniciados y se elimina su vínculo con el capitán. Si tiene historial deportivo se conserva un registro con un nombre genérico y un identificador técnico para no romper partidos, tablas y resultados. Si no tiene historial, se elimina el registro del club. La cuenta sigue disponible para crear otro club.",
   },
   {
     title: "Eliminación de perfil y cuenta",
@@ -47,7 +47,7 @@ export const privacySections = [
   },
   {
     title: "Registros técnicos, copias y dispositivo",
-    text: "La eliminación actúa sobre los datos activos de MCM y su autenticación. Los registros técnicos y copias de seguridad de los proveedores siguen sus ciclos de conservación y no se garantiza su desaparición inmediata. El limitador de acceso descarta ventanas de más de 24 horas al procesar nuevos intentos. En web se conserva la sesión en el almacenamiento del navegador; en las apps nativas se utiliza el almacén seguro del dispositivo. Al cerrar sesión o completar la eliminación se retira la sesión local de ese dispositivo.",
+    text: "La eliminación actúa sobre los datos activos de MCM y su autenticación. Los registros técnicos y copias de seguridad de los proveedores siguen sus ciclos de conservación y no se garantiza su desaparición inmediata. El limitador de acceso descarta ventanas de más de 24 horas al procesar nuevos intentos. Los escudos reemplazados se intentan retirar tras guardar y, si hay un fallo técnico, se vuelven a limpiar al guardar o eliminar el club o la cuenta. Los enlaces de visualización y las cachés pueden conservar temporalmente una copia. En web se conserva la sesión en el almacenamiento del navegador; en las apps nativas se utiliza el almacén seguro del dispositivo. Al cerrar sesión o completar la eliminación se retira la sesión local de ese dispositivo.",
   },
   {
     title: "Tus derechos",

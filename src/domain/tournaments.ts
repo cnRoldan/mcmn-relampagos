@@ -4,6 +4,9 @@ export type Club = {
   id: string;
   name: string;
   contacts: string[];
+  badgeUrl?: string | null;
+  badgePath?: string | null;
+  clubVersion?: number;
   registrationOrder?: number;
   registeredAt?: string;
   deletedAt?: string | null;
