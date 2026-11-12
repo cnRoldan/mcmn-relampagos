@@ -100,6 +100,9 @@ function LocalProvider({ children }: { children: React.ReactNode }) {
     isAdmin: true,
     myClub: undefined,
     refresh: async () => {},
+    deleteMyClub: async () => {
+      throw new Error("La eliminación de club requiere el servidor.");
+    },
     saveMyClub: async () => {
       throw new Error("Conecta el servidor para vincular tu club.");
     },

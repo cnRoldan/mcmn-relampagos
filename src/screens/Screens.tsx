@@ -21,6 +21,9 @@ import {
   currentTournament,
   tournamentState,
 } from "../domain/currentTournament";
+import { DeleteAccount } from "../components/DeleteAccount";
+import { DeleteClub } from "../components/DeleteClub";
+import { PrivacyPolicyButton } from "../components/PrivacyPolicy";
 import { CompetitionBoard } from "../components/CompetitionBoard";
 import { WhatsAppContact } from "../components/WhatsAppContact";
 import type { Routes } from "../navigation";
@@ -216,9 +219,11 @@ export function Settings() {
         </Text>
       </View>
       <LocalNote />
+      <PrivacyPolicyButton />
       <MemberModeration />
       {mode === "cloud" ? (
         <>
+          <DeleteAccount />
           {!!error && <Text style={s.error}>{error}</Text>}
           <Button
             label="Actualizar mi perfil"
@@ -312,6 +317,7 @@ export function MyClub() {
               }}
             />
           </View>
+          <DeleteClub />
           {night ? (
             <View style={s.card}>
               <Text style={s.heading}>{night.name}</Text>
@@ -366,8 +372,8 @@ export function MyClub() {
         <View style={s.card}>
           <Text style={s.heading}>Añade el club que representas</Text>
           <Text style={s.subtitle}>
-            Solo necesitas su nombre. No hay jugadores ni plantillas que
-            registrar.
+            Necesitas su nombre y un teléfono de WhatsApp. No hay jugadores ni
+            plantillas que registrar.
           </Text>
           <Button
             label="Crear mi club"

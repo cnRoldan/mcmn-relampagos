@@ -6,6 +6,7 @@ export type Context = {
   isAdmin: boolean;
   myClub: Club | undefined;
   refresh: () => Promise<void>;
+  deleteMyClub: (confirmation: string) => Promise<void>;
   saveMyClub: (name: string, contacts: string[]) => Promise<void>;
   updateContacts: (contacts: string[]) => Promise<void>;
   registerMyClub: (acceptRules?: boolean) => Promise<void>;

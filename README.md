@@ -50,6 +50,16 @@ Proyecto Supabase independiente `mkbvplehrbjrufhkcqun`, en la organización eleg
 - La interfaz consulta cambios al entrar, al volver al primer plano, cada 20 segundos y con Actualizar. Los avisos de exclusión se muestran en el torneo y Mi Club. **Push pendiente**, como pidió el usuario; no se envían correos ni mensajes externos.
 - Sesiones nativas en Expo SecureStore; web en almacenamiento local. Cerrar sesión retira el acceso de ese dispositivo y devuelve a la ficha pública si se entró por enlace.
 
+## Privacidad y eliminación
+
+La política se consulta antes de iniciar sesión y en Ajustes; también está publicada en `/privacidad.html`. Responsable confirmado: Claudio Roldán Ramos. Contacto autorizado por el propietario, tomado del aviso público de ConvoSquad: `convosquad.soporte@gmail.com`. El contenido único está en `src/content/privacy.ts`; `build:web` genera su versión HTML pública sin JavaScript ni seguimiento.
+
+Mi Club permite eliminar el club escribiendo su nombre exacto. Se borran teléfonos y avisos propios, se retiran inscripciones de torneos abiertos y nunca se renumeran los demás inscritos. Si tiene historial, se conserva un club genérico sin nombre original ni propietario para mantener partidos y clasificaciones; si no, se borra el registro. La cuenta permanece activa.
+
+Ajustes permite eliminar perfil y cuenta escribiendo ELIMINAR y la contraseña actual. `account-delete` verifica el JWT con Auth y vuelve a comprobar la contraseña en servidor; no acepta una identidad objetivo del cliente. Una preparación de servicio borra los datos del club y bloquea la cuenta antes de revocar sesiones y eliminar el usuario de Auth. Las relaciones de autoría pasan a NULL, y el perfil se elimina por cascada. Si falla Auth, la cuenta queda sin acceso privado y permite reintentar. La misma opción está disponible para cuentas suspendidas; su autenticación no concede acceso a torneos ni teléfonos.
+
+No se borran cuentas reales como prueba. Los casos de supresión, permisos, tokens antiguos y recuperación tras fallo se validan en PostgreSQL aislado, con servicios simulados y recorridos web interceptados. No se garantiza eliminación inmediata de los registros técnicos o copias de los proveedores ni de contactos o mensajes guardados fuera de MCM.
+
 ## Desarrollo y validación
 
 ```sh

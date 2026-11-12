@@ -52,10 +52,23 @@ const nativeStorage = {
     }
   },
 };
+const sessionStorage = Platform.OS === "web" ? AsyncStorage : nativeStorage;
+const storageKey = url
+  ? `sb-${new URL(url).hostname.split(".")[0]}-auth-token`
+  : "mcm-unconfigured";
+export async function forgetStoredSession() {
+  try {
+    await supabase?.auth.signOut({ scope: "local" });
+  } finally {
+    await sessionStorage.removeItem(storageKey);
+    await sessionStorage.removeItem(`${storageKey}-code-verifier`);
+  }
+}
 export const supabase = cloudConfigured
   ? createClient(url!, key!, {
       auth: {
-        storage: Platform.OS === "web" ? AsyncStorage : nativeStorage,
+        storage: sessionStorage,
+        storageKey,
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,

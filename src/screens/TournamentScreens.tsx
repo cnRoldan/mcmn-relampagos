@@ -579,7 +579,7 @@ function TournamentRegistrations() {
                 tournamentName={n.name}
               />
             )}
-          {isAdmin && !c.captainId && (
+          {isAdmin && !c.captainId && !c.deletedAt && (
             <Button
               secondary
               label="Vincular capitán"

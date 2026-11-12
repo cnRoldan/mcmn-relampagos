@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../cloud/AuthProvider";
+import { PrivacyPolicyButton } from "../components/PrivacyPolicy";
 import { BrandLogo } from "../components/BrandLogo";
 import { Button, Field, Note, Page } from "../components/UI";
 import { styles as s } from "../theme";
@@ -112,6 +113,7 @@ export function AuthScreen() {
             }}
           />
         </View>
+        <PrivacyPolicyButton />
       </Page>
     </SafeAreaView>
   );

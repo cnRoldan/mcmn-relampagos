@@ -19,6 +19,8 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { useApp } from "./src/state/AppState";
 import { AuthProvider, useAuth } from "./src/cloud/AuthProvider";
+import { DeleteAccount } from "./src/components/DeleteAccount";
+import { PrivacyPolicyButton } from "./src/components/PrivacyPolicy";
 import { AuthScreen } from "./src/screens/AuthScreen";
 import { TournamentLinkProvider, useTournamentLink } from "./src/cloud/links";
 import { SharedTournament } from "./src/screens/SharedTournament";
@@ -168,13 +170,23 @@ function SessionGate() {
       </View>
     );
   }
-  if (profile?.is_banned)
+  if (profile?.deletion_pending || profile?.is_banned)
     return (
-      <Page title="Acceso suspendido">
+      <Page
+        title={
+          profile.deletion_pending
+            ? "Eliminación en curso"
+            : "Acceso suspendido"
+        }
+      >
         <Note>
-          {profile.ban_reason ||
-            "La organización ha suspendido el acceso de esta cuenta."}
+          {profile.deletion_pending
+            ? "Tu acceso está bloqueado mientras se completa la eliminación. Puedes reintentar con tu contraseña."
+            : profile.ban_reason ||
+              "La organización ha suspendido el acceso de esta cuenta."}
         </Note>
+        <PrivacyPolicyButton />
+        <DeleteAccount />
         <Button
           label="Cerrar sesión"
           onPress={() => void signOut().catch((e) => setError(e.message))}

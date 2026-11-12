@@ -6,6 +6,7 @@ export type Club = {
   contacts: string[];
   registrationOrder?: number;
   registeredAt?: string;
+  deletedAt?: string | null;
   captainId?: string | null;
   excluded?: boolean;
   exclusionReason?: string;

@@ -20,7 +20,7 @@ Las RPCs usan `SECURITY DEFINER` de forma intencional, fijan `search_path` vací
 
 ## Validación
 
-Veintiséis pruebas pasan, incluidas ocho suites de PostgreSQL sobre RLS, formatos, normas, margen, exclusiones y baneos. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
+Treinta y dos pruebas pasan, incluidas diez suites de PostgreSQL sobre RLS, formatos, normas, margen, exclusiones y baneos. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
 
 La revisión automática rechazó crear usuarios QA directamente en Auth y elevar uno a administrador. No se crearon esos usuarios ni se intentó eludir el bloqueo. Por tanto, falta verificar un inicio de sesión válido y una inscripción con cuentas reales después de registrar al propietario.
 
@@ -60,3 +60,13 @@ La política `contact_read` permite a capitanes activos acceder a los contactos 
 Las RPCs `save_match_result`, `start_playoffs` y `reset_playoffs` son SECURITY DEFINER intencionadas, comprueban el rol administrativo activo, fijan `search_path` vacío, tienen ejecución anónima revocada y bloquean la fila del torneo, igual que cierre y finalización. Se comprueban versiones al guardar. El servidor valida las clasificaciones deportivas, resultados completos, penaltis y dependencia de los cruces. Los helpers internos y triggers no se exponen a los clientes. El aviso genérico del asesor sobre funciones administrativas ejecutables por autenticados corresponde a esta autorización comprobada en servidor.
 
 Los torneos finalizados se consultan pero sus marcadores no se editan. Reiniciar playoffs requiere una confirmación explícita en la interfaz administrativa; conserva todos los resultados de grupos. Se han probado calendarios para las cuatro combinaciones admitidas, toda la Copa de ocho, Copa de cuatro, tablas, empates, permisos, baneos y versiones en PostgreSQL aislado. Las pruebas visuales usan API simulada y no crean usuarios privilegiados en producción.
+
+## Eliminación y datos personales
+
+`privacy_and_deletion` añade `deletion_pending` al perfil y `deleted_at` al club. La marca pendiente desactiva permisos incluso con JWT anteriores. Las funciones con bloqueo directo de perfil comprueban también ese estado. Los clubes borrados no se pueden vincular ni inscribir de nuevo como registros históricos.
+
+`delete_my_club` identifica al dueño con `auth.uid()` y exige el nombre exacto. El helper de borrado solo es invocable por servidor: bloquea perfil, torneos en orden y club; borra teléfonos/avisos, retira inscripciones abiertas y desvincula la autoría de las conservadas. Los clubes históricos se renombran y no conservan propietario; se mantienen identificadores técnicos y resultados. Las FK de autoría pasan a NULL al eliminar un perfil, evitando cascadas sobre partidos.
+
+`prepare_account_deletion(uuid)` es exclusiva de servicio. La función Edge `account-delete` obtiene el usuario de un JWT verificado, exige la contraseña actual de ese mismo usuario, limita intentos, prepara el borrado, revoca todas las sesiones y ejecuta `admin.deleteUser(id,false)`. No acepta IDs o correos objetivo del cuerpo. `verify_jwt=false` en la puerta de Edge se debe a esta autenticación explícita; la autorización siempre se verifica dentro. Un error después de preparar devuelve 503 con estado pendiente, nunca éxito, y admite reintento. No hay almacenamiento de archivos de usuario que impida actualmente el borrado de Auth.
+
+Se permite a las cuentas suspendidas iniciar sesión para acceder a la política y la supresión; los helpers de permisos y RLS siguen denegando sus datos privados y operaciones deportivas. El cliente elimina la sesión local al completar la supresión. Las pruebas HTTP verifican credenciales, suplantación por cuerpo, límites y fallos parciales. Las pruebas PostgreSQL comprueban el borrado de datos activos y los históricos conservados, sin eliminar usuarios reales del servidor.

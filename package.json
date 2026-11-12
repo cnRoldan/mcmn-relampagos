@@ -1,6 +1,6 @@
 {
   "name": "relampagos",
-  "description": "App móvil de torneos relámpago para Clubes Pro",
+  "description": "App m\u00f3vil de torneos rel\u00e1mpago para Clubes Pro",
   "license": "0BSD",
   "version": "0.1.0",
   "main": "index.ts",
@@ -37,7 +37,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
-    "build:web": "expo export --platform web --output-dir dist --max-workers 2"
+    "build:web": "node --experimental-strip-types scripts/build-privacy.mjs && expo export --platform web --output-dir dist --max-workers 2"
   },
   "private": true
 }

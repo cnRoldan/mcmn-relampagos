@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { AppState } from "react-native";
 import type { Session } from "@supabase/supabase-js";
-import { cloudConfigured, supabase } from "./client";
+import { cloudConfigured, supabase, forgetStoredSession } from "./client";
 export type Profile = {
   id: string;
   ea_id: string;
   role: "admin" | "captain";
   is_banned?: boolean;
+  deletion_pending?: boolean;
   ban_reason?: string;
 };
 type Auth = {
@@ -18,6 +19,7 @@ type Auth = {
   signIn: (ea: string, password: string) => Promise<void>;
   signUp: (ea: string, password: string) => Promise<string>;
   signOut: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
   reloadProfile: () => Promise<void>;
 };
 const C = createContext<Auth | null>(null);
@@ -63,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase || !session) return;
     const { data, error } = await supabase
       .from("profiles")
-      .select("id,ea_id,role,is_banned,ban_reason")
+      .select("id,ea_id,role,is_banned,ban_reason,deletion_pending")
       .eq("id", session.user.id)
       .single();
     if (error) throw new Error("No se ha podido cargar tu perfil.");
@@ -78,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("id,ea_id,role,is_banned,ban_reason")
+          .select("id,ea_id,role,is_banned,ban_reason,deletion_pending")
           .eq("id", session.user.id)
           .single();
         if (alive) {
@@ -151,6 +153,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data.message ||
         "Cuenta creada. Ya puedes entrar con tu ID de EA y contraseña."
       );
+    },
+    deleteAccount: async (password) => {
+      if (!supabase || !session) throw new Error("Inicia sesión.");
+      const { data, error } = await supabase.functions.invoke(
+        "account-delete",
+        { body: { password } },
+      );
+      if (error || !data?.deleted) {
+        let text = "No se pudo eliminar la cuenta. Inténtalo de nuevo.";
+        try {
+          text = (await error?.context.json())?.error || text;
+        } catch {}
+        await reloadProfile().catch(() => {});
+        throw new Error(text);
+      }
+      // Auth deletion succeeded. Remove the local credential even if the
+      // now-deleted user's sign-out endpoint can no longer validate its JWT.
+      await forgetStoredSession().catch(() => {});
+      setProfile(null);
+      setSession(null);
     },
     signOut: async () => {
       const { error } = await supabase!.auth.signOut({ scope: "local" });

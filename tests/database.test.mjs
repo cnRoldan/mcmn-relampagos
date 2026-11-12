@@ -1048,3 +1048,272 @@ test("Copa: clasificados, semifinales cruzadas, penaltis, final y correcciones c
     await db.close();
   }
 });
+
+test("Privacidad: eliminar solo mi club retira inscripciones abiertas sin renumerar", async () => {
+  const db = await setup();
+  try {
+    const n = await as(db, admin, () =>
+      one(
+        db,
+        "select public.create_tournament('Borrado abierto','2020-01-01','22:00','Normas')",
+      ),
+    );
+    const ca = await as(db, a, () =>
+      one(db, "select public.create_my_club('Borrable',array['+34611111111'])"),
+    );
+    const cb = await as(db, b, () =>
+      one(
+        db,
+        "select public.create_my_club('Conservado',array['+34622222222'])",
+      ),
+    );
+    for (const id of [a, b])
+      await as(db, id, () =>
+        db.query("select public.join_tournament($1,true)", [n]),
+      );
+    await as(db, a, async () => {
+      await assert.rejects(
+        db.query("select public.delete_my_club('Conservado')"),
+      );
+      await assert.rejects(
+        db.query("select public.prepare_account_deletion($1)", [b]),
+      );
+      await assert.rejects(db.query("select public.erase_owned_club($1)", [b]));
+      await db.query("select public.delete_my_club('Borrable')");
+    });
+    assert.equal(
+      await one(db, "select count(*)::int from public.clubs where id=$1", [ca]),
+      0,
+    );
+    assert.equal(
+      await one(
+        db,
+        "select count(*)::int from public.club_contacts where club_id=$1",
+        [ca],
+      ),
+      0,
+    );
+    assert.equal(
+      Number(
+        await one(
+          db,
+          "select registration_number from public.registrations where club_id=$1",
+          [cb],
+        ),
+      ),
+      2,
+    );
+    assert.equal(
+      await one(db, "select count(*)::int from auth.users where id=$1", [a]),
+      1,
+    );
+    const replacement = await as(db, a, () =>
+      one(db, "select public.create_my_club('Borrable',array['+34611111111'])"),
+    );
+    await as(db, a, () =>
+      db.query("select public.join_tournament($1,true)", [n]),
+    );
+    assert.equal(
+      Number(
+        await one(
+          db,
+          "select registration_number from public.registrations where club_id=$1",
+          [replacement],
+        ),
+      ),
+      3,
+    );
+  } finally {
+    await db.close();
+  }
+});
+test("Privacidad: borrar cuenta conserva partidos y bloquea tokens anteriores desde la preparación", async () => {
+  const db = await setup();
+  try {
+    const { n, ids, plan } = await competitionFixture(
+      db,
+      4,
+      "liga",
+      "HistorialPrivado",
+    );
+    await as(db, admin, () =>
+      db.query("select public.assign_club_captain($1,'CapitanA')", [ids[0]]),
+    );
+    await as(db, admin, () =>
+      db.query("select public.assign_club_captain($1,'CapitanB')", [ids[1]]),
+    );
+    const open = await as(db, admin, () =>
+      one(
+        db,
+        "select public.create_tournament('Abierto privacidad','2020-01-01','22:00','Normas')",
+      ),
+    );
+    for (const id of [a, b])
+      await as(db, id, () =>
+        db.query("select public.join_tournament($1,true)", [open]),
+      );
+    // All privileged fixtures remain inside this isolated PostgreSQL instance.
+    await db.query("update public.profiles set role='admin' where id=$1", [a]);
+    const m = (await getGames(db, n))[0];
+    await as(db, a, () =>
+      db.query("select public.save_match_result($1,0,2,1)", [m.id]),
+    );
+    await as(db, a, () =>
+      db.query(
+        "select public.set_registration_excluded($1,$2,true,'Motivo para otro club')",
+        [open, ids[1]],
+      ),
+    );
+    await db.query(
+      "insert into public.registration_notices(registration_id,excluded,reason,changed_by) select id,false,'Datos personales del club propio',$2 from public.registrations where night_id=$3 and club_id=$1",
+      [ids[0], a, n],
+    );
+    const ownReg = await one(
+      db,
+      "select id from public.registrations where night_id=$1 and club_id=$2",
+      [n, ids[0]],
+    );
+    await db.exec("set role service_role");
+    await db.query("select public.prepare_account_deletion($1)", [a]);
+    await db.exec("reset role");
+    assert.equal(
+      await one(
+        db,
+        "select deletion_pending from public.profiles where id=$1",
+        [a],
+      ),
+      true,
+    );
+    const tombstone = (
+      await db.query("select * from public.clubs where id=$1", [ids[0]])
+    ).rows[0];
+    assert(tombstone.deleted_at);
+    assert.equal(tombstone.owner_id, null);
+    assert.match(tombstone.name, /^Club eliminado/);
+    assert(!tombstone.name.includes("HistorialPrivado"));
+    assert.equal(
+      await one(
+        db,
+        "select count(*)::int from public.club_contacts where club_id=$1",
+        [ids[0]],
+      ),
+      0,
+    );
+    assert.equal(
+      await one(
+        db,
+        "select count(*)::int from public.registration_notices where registration_id=$1",
+        [ownReg],
+      ),
+      0,
+    );
+    assert.equal(
+      await one(
+        db,
+        "select count(*)::int from public.registrations where night_id=$1 and club_id=$2",
+        [open, ids[0]],
+      ),
+      0,
+    );
+    assert.equal(
+      await one(
+        db,
+        "select registered_by from public.registrations where id=$1",
+        [ownReg],
+      ),
+      null,
+    );
+    await as(db, a, async () => {
+      for (const table of [
+        "clubs",
+        "nights",
+        "registrations",
+        "club_contacts",
+        "competition_matches",
+      ])
+        assert.equal(
+          (await db.query(`select * from public.${table}`)).rows.length,
+          0,
+        );
+      assert.equal(await one(db, "select public.is_admin()"), false);
+      await assert.rejects(
+        db.query(
+          "select public.create_my_club('Reentrada',array['+34611111111'])",
+        ),
+      );
+      await assert.rejects(
+        db.query("select public.update_my_contacts(array['+34611111111'])"),
+      );
+      await assert.rejects(
+        db.query("select public.join_tournament($1,true)", [open]),
+      );
+    });
+    await as(db, admin, async () => {
+      await assert.rejects(
+        db.query("select public.assign_club_captain($1,'CapitanB')", [ids[0]]),
+      );
+      await assert.rejects(
+        db.query("select public.register_club($1,$2)", [open, ids[0]]),
+      );
+    });
+    // Idempotent recovery after an external Auth failure.
+    await db.exec("set role service_role");
+    await db.query("select public.prepare_account_deletion($1)", [a]);
+    await db.exec("reset role");
+    await db.query("delete from auth.users where id=$1", [a]);
+    assert.equal(
+      await one(db, "select count(*)::int from public.profiles where id=$1", [
+        a,
+      ]),
+      0,
+    );
+    assert.equal(
+      await one(
+        db,
+        "select updated_by from public.competition_matches where id=$1",
+        [m.id],
+      ),
+      null,
+    );
+    assert.equal(
+      await one(
+        db,
+        "select home_goals from public.competition_matches where id=$1",
+        [m.id],
+      ),
+      2,
+    );
+    assert.equal(
+      await one(
+        db,
+        "select count(*)::int from public.competition_matches where night_id=$1",
+        [n],
+      ),
+      6,
+    );
+    assert.equal(
+      await one(
+        db,
+        "select sum(points)::int from public.competition_standings($1,$2)",
+        [n, plan.id],
+      ),
+      3,
+    );
+    assert.equal(
+      await one(
+        db,
+        "select count(*)::int from public.registration_notices where changed_by=$1",
+        [a],
+      ),
+      0,
+    );
+    await as(db, a, async () =>
+      assert.equal(
+        (await db.query("select * from public.nights")).rows.length,
+        0,
+      ),
+    );
+  } finally {
+    await db.close();
+  }
+});

@@ -19,7 +19,12 @@ type TournamentRow = {
   effective_start: string;
   ended_at: string | null;
 };
-type ClubRow = { id: string; name: string; owner_id: string | null };
+type ClubRow = {
+  id: string;
+  name: string;
+  owner_id: string | null;
+  deleted_at: string | null;
+};
 type RegistrationRow = {
   night_id: string;
   club_id: string;
@@ -44,7 +49,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     try {
       const results = await Promise.all([
         supabase.rpc("list_tournaments_with_status"),
-        supabase.from("clubs").select("id,name,owner_id"),
+        supabase.from("clubs").select("id,name,owner_id,deleted_at"),
         supabase
           .from("registrations")
           .select(
@@ -76,7 +81,8 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
         );
       const mapClub = (c: ClubRow): Club => ({
         id: c.id,
-        name: c.name,
+        name: c.deleted_at ? `Club eliminado · ${c.id.slice(0, 6)}` : c.name,
+        deletedAt: c.deleted_at,
         contacts: contacts.get(c.id) || [],
         captainId: c.owner_id,
       });
@@ -266,6 +272,8 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
       }),
     confirmPlan: (plan) =>
       rpc("confirm_plan", { p_night_id: current(), p_plan: plan }),
+    deleteMyClub: (confirmation) =>
+      rpc("delete_my_club", { p_confirmation: confirmation }),
     saveMyClub: (name, contacts) =>
       rpc("create_my_club", {
         p_name: name.trim(),
