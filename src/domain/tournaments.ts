@@ -1,3 +1,4 @@
+import type { Match } from "./results";
 export type Size = 4 | 6 | 8;
 export type Club = {
   id: string;
@@ -25,6 +26,7 @@ export type Night = {
   tournaments: Tournament[];
   demo?: boolean;
   endedAt?: string | null;
+  matches?: Match[];
   rules?: string;
   graceMinutes?: number;
   effectiveStart?: string;

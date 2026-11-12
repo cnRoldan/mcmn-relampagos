@@ -21,6 +21,7 @@ import {
   currentTournament,
   tournamentState,
 } from "../domain/currentTournament";
+import { CompetitionBoard } from "../components/CompetitionBoard";
 import { WhatsAppContact } from "../components/WhatsAppContact";
 import type { Routes } from "../navigation";
 const message = (e: unknown) =>
@@ -148,6 +149,9 @@ export function Home() {
               }
             />
           </View>
+          {current.tournaments.map((t) => (
+            <CompetitionBoard key={t.id} night={current} tournament={t} />
+          ))}
           <Text style={s.heading}>Equipos apuntados · {clubs.length}</Text>
           {!clubs.length && (
             <Note>
@@ -242,8 +246,8 @@ export function Settings() {
       <View style={s.card}>
         <Text style={s.heading}>Próximos pasos</Text>
         <Text style={s.subtitle}>
-          Resultados, puntos, desempates, cupos y gestión de bajas después del
-          cierre.
+          Notificaciones push, nuevos formatos y gestión de bajas después del
+          inicio.
         </Text>
       </View>
     </Page>
@@ -462,8 +466,8 @@ export function Honours() {
         </Text>
       </View>
       <Note>
-        El registro de campeones se incorporará junto con los resultados y las
-        reglas de clasificación.
+        El historial de títulos se incorporará al confirmar los campeones de
+        cada torneo.
       </Note>
     </Page>
   );

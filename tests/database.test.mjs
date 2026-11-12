@@ -736,3 +736,315 @@ test("WhatsApp: teléfono obligatorio, contactos entre inscritos y fin de torneo
     await db.close();
   }
 });
+
+async function competitionFixture(db, size, format, label) {
+  const n = await as(db, admin, () =>
+    one(
+      db,
+      "select public.create_tournament($1,'2020-01-01','22:00','Normas')",
+      [label],
+    ),
+  );
+  const ids = [];
+  for (let i = 0; i < size; i++)
+    ids.push(
+      await as(db, admin, () =>
+        one(
+          db,
+          "select (public.admin_register_club($1,$2,array['+34611111111'])).club_id",
+          [n, `${label} Club ${i}`],
+        ),
+      ),
+    );
+  const plan = { id: `${label}-competition`, size, format, clubIds: ids };
+  await as(db, admin, () =>
+    db.query("select public.confirm_plan($1,$2)", [n, JSON.stringify([plan])]),
+  );
+  return { n, ids, plan };
+}
+async function saveScore(db, m, home, away, hp = null, ap = null) {
+  return as(db, admin, () =>
+    db.query("select public.save_match_result($1,$2,$3,$4,$5,$6)", [
+      m.id,
+      m.version,
+      home,
+      away,
+      hp,
+      ap,
+    ]),
+  );
+}
+const getGames = async (db, n) =>
+  (
+    await db.query(
+      "select * from public.competition_matches where night_id=$1 order by phase,round_number,match_number",
+      [n],
+    )
+  ).rows;
+test("Resultados: calendarios, tablas de Liga, permisos y protección frente a sobrescrituras", async () => {
+  const db = await setup();
+  try {
+    for (const [size, format, total] of [
+      [4, "liga", 6],
+      [6, "liga", 15],
+      [4, "copa", 6],
+      [8, "copa", 12],
+    ]) {
+      const { n, ids, plan } = await competitionFixture(
+        db,
+        size,
+        format,
+        `Formato${size}${format}`,
+      );
+      const games = await getGames(db, n);
+      assert.equal(games.length, total);
+      assert.equal(
+        new Set(games.map((m) => [m.home_id, m.away_id].sort().join("-"))).size,
+        total,
+      );
+      if (format !== "liga") continue;
+      let table = (
+        await db.query("select * from public.competition_standings($1,$2)", [
+          n,
+          plan.id,
+        ])
+      ).rows;
+      assert.equal(table.length, size);
+      assert(table.every((r) => r.points === 0 && r.played === 0));
+      const m = games[0];
+      await as(db, a, async () => {
+        await assert.rejects(
+          db.query("select public.save_match_result($1,0,1,0)", [m.id]),
+        );
+        await assert.rejects(
+          db.query(
+            "update public.competition_matches set home_goals=99,away_goals=0 where id=$1",
+            [m.id],
+          ),
+        );
+        await assert.rejects(
+          db.query("select public.seed_competition_matches($1)", [n]),
+        );
+      });
+      await assert.rejects(saveScore(db, m, 1, null));
+      await assert.rejects(saveScore(db, m, -1, 0));
+      await assert.rejects(saveScore(db, m, 1, 1, 4, 3));
+      await saveScore(db, m, 3, 1);
+      await assert.rejects(saveScore(db, m, 2, 1), /ha cambiado/);
+      table = (
+        await db.query("select * from public.competition_standings($1,$2)", [
+          n,
+          plan.id,
+        ])
+      ).rows;
+      const h = table.find((r) => r.club_id === m.home_id),
+        away = table.find((r) => r.club_id === m.away_id);
+      assert.deepEqual([h.points, h.played, h.gf, h.ga, h.gd], [3, 1, 3, 1, 2]);
+      assert.deepEqual(
+        [away.points, away.lost, away.gf, away.ga],
+        [0, 1, 1, 3],
+      );
+      await saveScore(db, { ...m, version: 1 }, 0, 0);
+      table = (
+        await db.query("select * from public.competition_standings($1,$2)", [
+          n,
+          plan.id,
+        ])
+      ).rows;
+      assert.equal(
+        table.reduce((s, r) => s + r.points, 0),
+        2,
+      );
+      await saveScore(db, { ...m, version: 2 }, null, null);
+      assert.equal(
+        await one(
+          db,
+          "select sum(points)::int from public.competition_standings($1,$2)",
+          [n, plan.id],
+        ),
+        0,
+      );
+      await as(db, admin, () =>
+        db.query("select public.finish_tournament($1)", [n]),
+      );
+      await assert.rejects(saveScore(db, { ...m, version: 3 }, 1, 0));
+      await as(db, a, async () =>
+        assert.equal(
+          (
+            await db.query(
+              "select * from public.competition_matches where night_id=$1",
+              [n],
+            )
+          ).rows.length,
+          total,
+        ),
+      );
+      await db.query("update public.profiles set is_banned=true where id=$1", [
+        a,
+      ]);
+      await as(db, a, async () =>
+        assert.equal(
+          (await db.query("select * from public.competition_matches")).rows
+            .length,
+          0,
+        ),
+      );
+      await db.query("update public.profiles set is_banned=false where id=$1", [
+        a,
+      ]);
+    }
+    await db.exec("set role anon");
+    await assert.rejects(db.query("select * from public.competition_matches"));
+    await db.exec("reset role");
+  } finally {
+    await db.close();
+  }
+});
+test("Copa: clasificados, semifinales cruzadas, penaltis, final y correcciones coherentes", async () => {
+  const db = await setup();
+  try {
+    const { n, ids, plan } = await competitionFixture(
+      db,
+      8,
+      "copa",
+      "CopaCompleta",
+    );
+    await as(db, a, () =>
+      assert.rejects(
+        db.query("select public.start_playoffs($1,$2,$3,$4)", [
+          n,
+          plan.id,
+          ids.slice(0, 2),
+          ids.slice(4, 6),
+        ]),
+      ),
+    );
+    await as(db, admin, () =>
+      assert.rejects(
+        db.query("select public.start_playoffs($1,$2,$3,$4)", [
+          n,
+          plan.id,
+          ids.slice(0, 2),
+          ids.slice(4, 6),
+        ]),
+      ),
+    );
+    let games = await getGames(db, n);
+    // Higher seeded clubs win every group fixture: deterministic 9/6/3/0 points.
+    for (const m of games)
+      await saveScore(
+        db,
+        m,
+        ids.indexOf(m.home_id) < ids.indexOf(m.away_id) ? 2 : 0,
+        ids.indexOf(m.home_id) < ids.indexOf(m.away_id) ? 0 : 2,
+      );
+    await as(db, admin, () =>
+      assert.rejects(
+        db.query("select public.start_playoffs($1,$2,$3,$4)", [
+          n,
+          plan.id,
+          [ids[0], ids[2]],
+          ids.slice(4, 6),
+        ]),
+      ),
+    );
+    await as(db, admin, () =>
+      assert.rejects(
+        db.query("select public.start_playoffs($1,$2,$3,$4)", [
+          n,
+          plan.id,
+          ids.slice(0, 2),
+          ids.slice(0, 2),
+        ]),
+      ),
+    );
+    await as(db, admin, () =>
+      db.query("select public.start_playoffs($1,$2,$3,$4)", [
+        n,
+        plan.id,
+        ids.slice(0, 2),
+        ids.slice(4, 6),
+      ]),
+    );
+    games = await getGames(db, n);
+    let semis = games.filter((m) => m.phase === "semifinal");
+    assert.deepEqual(
+      semis.map((m) => [m.home_id, m.away_id]),
+      [
+        [ids[0], ids[5]],
+        [ids[4], ids[1]],
+      ],
+    );
+    const group = games.find((m) => m.phase === "group_a");
+    await assert.rejects(saveScore(db, group, 4, 0), /Reinicia/);
+    await assert.rejects(saveScore(db, semis[0], 1, 1));
+    await assert.rejects(saveScore(db, semis[0], 1, 1, 4, 4));
+    await saveScore(db, semis[0], 1, 1, 4, 3);
+    await saveScore(db, semis[1], 0, 2);
+    games = await getGames(db, n);
+    const final = games.find((m) => m.phase === "final");
+    assert.deepEqual([final.home_id, final.away_id], [ids[0], ids[1]]);
+    await assert.rejects(
+      saveScore(db, { ...semis[0], version: 1 }, 0, 1),
+      /Reinicia/,
+    );
+    await saveScore(db, final, 2, 0);
+    assert.equal(
+      await one(
+        db,
+        "select sum(gf)::int from public.competition_standings($1,$2)",
+        [n, plan.id],
+      ),
+      24,
+    );
+    assert.equal(
+      await one(
+        db,
+        "select max(played)::int from public.competition_standings($1,$2)",
+        [n, plan.id],
+      ),
+      3,
+    );
+    // A cup finalist plays three group matches + semifinal + final, never six.
+    assert.equal(
+      await one(
+        db,
+        "select count(*)::int from public.competition_matches where night_id=$1 and (home_id=$2 or away_id=$2)",
+        [n, ids[0]],
+      ),
+      5,
+    );
+    await as(db, a, () =>
+      assert.rejects(
+        db.query("select public.reset_playoffs($1,$2)", [n, plan.id]),
+      ),
+    );
+    await as(db, admin, () =>
+      db.query("select public.reset_playoffs($1,$2)", [n, plan.id]),
+    );
+    games = await getGames(db, n);
+    assert.equal(games.length, 12);
+    assert(games.every((m) => m.home_goals !== null));
+    await saveScore(db, group, 1, 1);
+    // Four-club cup: exact tied groups can be decided by the administrator.
+    const four = await competitionFixture(db, 4, "copa", "CopaCuatro");
+    for (const m of await getGames(db, four.n)) await saveScore(db, m, 0, 0);
+    await as(db, admin, () =>
+      db.query("select public.start_playoffs($1,$2,$3,$4)", [
+        four.n,
+        four.plan.id,
+        [four.ids[3], four.ids[1]],
+        [],
+      ]),
+    );
+    const fourFinal = (await getGames(db, four.n)).find(
+      (m) => m.phase === "final",
+    );
+    assert.deepEqual(
+      [fourFinal.home_id, fourFinal.away_id],
+      [four.ids[3], four.ids[1]],
+    );
+  } finally {
+    await db.close();
+  }
+});

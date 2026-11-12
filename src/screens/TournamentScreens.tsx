@@ -13,6 +13,7 @@ import {
   Sheet,
   Confirm,
 } from "../components/UI";
+import { CompetitionBoard } from "../components/CompetitionBoard";
 import { WhatsAppContact } from "../components/WhatsAppContact";
 import { normalizePhone } from "../domain/contacts";
 import { tournamentState } from "../domain/currentTournament";
@@ -871,11 +872,12 @@ function TournamentCompetition() {
               {shown.size} participantes · Máximo{" "}
               {maxMatches(shown.size, shown.format)} partidos por equipo.
             </Text>
-            {shown.clubIds.map((id) => (
-              <Text key={id} style={s.text}>
-                {n.clubs.find((c) => c.id === id)?.name}
-              </Text>
-            ))}
+            {!confirmed &&
+              shown.clubIds.map((id) => (
+                <Text key={id} style={s.text}>
+                  {n.clubs.find((c) => c.id === id)?.name}
+                </Text>
+              ))}
             {!confirmed && isAdmin && (
               <Button
                 label={
@@ -898,27 +900,33 @@ function TournamentCompetition() {
               />
             )}
           </View>
-          {competitionPhases(shown).map((phase, i) => (
-            <View key={i} style={{ gap: 14 }}>
-              <Text style={s.heading}>{phase.title}</Text>
-              {phase.rounds.map((round, r) => (
-                <View key={r} style={s.card}>
-                  <Text style={s.eyebrow}>{round.label.toUpperCase()}</Text>
-                  {round.matches.map(([a, b], m) => (
-                    <View key={m} style={s.row}>
-                      <Text style={[s.text, { flex: 1 }]}>
-                        {n.clubs.find((c) => c.id === a)?.name ?? a}
-                      </Text>
-                      <Text style={s.subtitle}>vs</Text>
-                      <Text style={[s.text, { flex: 1, textAlign: "right" }]}>
-                        {n.clubs.find((c) => c.id === b)?.name ?? b}
-                      </Text>
+          {confirmed
+            ? n.tournaments.map((t) => (
+                <CompetitionBoard key={t.id} night={n} tournament={t} manage />
+              ))
+            : competitionPhases(shown).map((phase, i) => (
+                <View key={i} style={{ gap: 14 }}>
+                  <Text style={s.heading}>{phase.title}</Text>
+                  {phase.rounds.map((round, r) => (
+                    <View key={r} style={s.card}>
+                      <Text style={s.eyebrow}>{round.label.toUpperCase()}</Text>
+                      {round.matches.map(([a, b], m) => (
+                        <View key={m} style={s.row}>
+                          <Text style={[s.text, { flex: 1 }]}>
+                            {n.clubs.find((c) => c.id === a)?.name ?? a}
+                          </Text>
+                          <Text style={s.subtitle}>vs</Text>
+                          <Text
+                            style={[s.text, { flex: 1, textAlign: "right" }]}
+                          >
+                            {n.clubs.find((c) => c.id === b)?.name ?? b}
+                          </Text>
+                        </View>
+                      ))}
                     </View>
                   ))}
                 </View>
               ))}
-            </View>
-          ))}
         </>
       )}
       {!!err && (

@@ -20,7 +20,7 @@ Las RPCs usan `SECURITY DEFINER` de forma intencional, fijan `search_path` vací
 
 ## Validación
 
-Veinte pruebas pasan, incluidas seis suites de PostgreSQL sobre RLS, formatos, normas, margen, exclusiones y baneos. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
+Veintiséis pruebas pasan, incluidas ocho suites de PostgreSQL sobre RLS, formatos, normas, margen, exclusiones y baneos. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
 
 La revisión automática rechazó crear usuarios QA directamente en Auth y elevar uno a administrador. No se crearon esos usuarios ni se intentó eludir el bloqueo. Por tanto, falta verificar un inicio de sesión válido y una inscripción con cuentas reales después de registrar al propietario.
 
@@ -50,3 +50,13 @@ La auditoría también indica que la protección de contraseñas filtradas de Su
 La política `contact_read` permite a capitanes activos acceder a los contactos de otros clubes no excluidos cuando ambos están inscritos en el mismo torneo no finalizado. Fuera de ese caso, solo propietario y administradores. Se comprueba sobre la sesión y registros actuales, no sobre metadatos del cliente. Un índice por club/torneo respalda la consulta.
 
 `check_contacts` exige de uno a tres teléfonos válidos con prefijo internacional explícito. Un trigger comprueba este requisito en cada nueva inscripción, también para clubes existentes sin teléfono. Los registros anteriores se conservan. WhatsApp usa HTTPS `wa.me` y un mensaje preparado; abrir el chat requiere tocar el botón y no envía el mensaje.
+
+## Partidos y clasificación
+
+`competition_results` añade `competition_matches` con RLS para miembros activos y sin escrituras directas de cliente. Un trigger del cierre de inscripciones genera el calendario en la misma transacción de `confirm_plan`. Las competiciones confirmadas anteriores reciben un calendario sin resultados, sin cambiar cuentas ni roles.
+
+`competition_standings` usa SECURITY INVOKER y calcula PJ/G/E/P/GF/GC/DG/Pts desde partidos completados de grupos o Liga. La interfaz calcula la misma tabla desde los partidos; las pruebas verifican ambos cálculos y la exclusión de penaltis/playoffs. Los marcadores pendientes son NULL, no ceros.
+
+Las RPCs `save_match_result`, `start_playoffs` y `reset_playoffs` son SECURITY DEFINER intencionadas, comprueban el rol administrativo activo, fijan `search_path` vacío, tienen ejecución anónima revocada y bloquean la fila del torneo, igual que cierre y finalización. Se comprueban versiones al guardar. El servidor valida las clasificaciones deportivas, resultados completos, penaltis y dependencia de los cruces. Los helpers internos y triggers no se exponen a los clientes. El aviso genérico del asesor sobre funciones administrativas ejecutables por autenticados corresponde a esta autorización comprobada en servidor.
+
+Los torneos finalizados se consultan pero sus marcadores no se editan. Reiniciar playoffs requiere una confirmación explícita en la interfaz administrativa; conserva todos los resultados de grupos. Se han probado calendarios para las cuatro combinaciones admitidas, toda la Copa de ocho, Copa de cuatro, tablas, empates, permisos, baneos y versiones en PostgreSQL aislado. Las pruebas visuales usan API simulada y no crean usuarios privilegiados en producción.

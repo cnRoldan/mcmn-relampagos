@@ -29,6 +29,14 @@ El capitán entra o crea su cuenta, vuelve al mismo torneo, crea o vincula su cl
 
 Los enlaces web mantienen el destino al recargar o autenticarse. El esquema nativo `relampagos://torneo/<uuid>` se reconoce en código; los enlaces universales del sistema y las compilaciones móviles requieren configurar posteriormente los identificadores y la distribución de la app.
 
+## Clasificación y resultados
+
+Cuando el torneo está en curso, Inicio muestra la tabla de Liga o las tablas de grupos y playoffs de Copa. En Competición se consultan las jornadas y los administradores guardan o corrigen marcadores. Las columnas son PJ, Pts, GF, GC y DG; una victoria suma 3 puntos, un empate 1 y una derrota 0. Un partido pendiente no cuenta como 0–0.
+
+El orden deportivo es puntos, diferencia de goles y goles a favor. Los empates exactos se indican con «=»; el orden visual de los empatados no decide una clasificación. En Copa, tras completar los grupos, el administrador confirma los dos primeros de cada uno; el servidor solo permite decidir entre clubes empatados en esos tres criterios. Copa de ocho genera 1.º A–2.º B y 1.º B–2.º A; Copa de cuatro genera la final de su grupo único.
+
+Las eliminatorias empatadas requieren una tanda de penaltis con ganador. Sus goles y resultados no se suman a la tabla de grupos. La final se genera con los ganadores de semifinales. Para corregir un resultado que ya determina un cruce, el administrador debe reiniciar los playoffs con confirmación: se borran solo los cruces y marcadores de eliminatorias y se conservan los grupos. Las versiones de los partidos evitan sobrescribir cambios de otro administrador sin actualizar. Finalizar el torneo bloquea nuevos resultados y conserva sus tablas.
+
 ## Cuentas, permisos y moderación
 
 Proyecto Supabase independiente `mkbvplehrbjrufhkcqun`, en la organización elegida por el propietario. No se han copiado cuentas ni datos de ConvoSquad.
@@ -72,4 +80,4 @@ npx --yes netlify-cli deploy --prod --dir dist --no-build
 
 ## Alcance pendiente
 
-Resultados, puntos y desempates, campeones y Palmarés, recuperación de cuentas, varios capitanes por club, notificaciones push y nuevas combinaciones de grupos. Las normas se fijan al crear el torneo; editar reglas tras abrir inscripciones requerirá versionar su aceptación.
+Reglas avanzadas de desempate, campeones y Palmarés, recuperación de cuentas, varios capitanes por club, notificaciones push y nuevas combinaciones de grupos. Las normas se fijan al crear el torneo; editar reglas tras abrir inscripciones requerirá versionar su aceptación.

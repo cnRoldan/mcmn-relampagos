@@ -1,3 +1,4 @@
+import type { Match, Score } from "../domain/results";
 import { createContext } from "react";
 import type { Data, Night, Club, Tournament } from "../domain/tournaments";
 export type Context = {
@@ -19,6 +20,13 @@ export type Context = {
     time: string,
     rules?: string,
   ) => Promise<void>;
+  saveResult: (match: Match, score: Score) => Promise<void>;
+  startPlayoffs: (
+    competitionId: string,
+    groupA: string[],
+    groupB: string[],
+  ) => Promise<void>;
+  resetPlayoffs: (competitionId: string) => Promise<void>;
   finishTournament: () => Promise<void>;
   extendStart: (minutes: number) => Promise<void>;
   setExcluded: (

@@ -14,6 +14,7 @@ import {
   validateClub,
   validatePlan,
 } from "../domain/tournaments";
+import { initialMatches } from "../domain/results";
 const KEY = "@relampagos/mobile/v1";
 function LocalProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<Data>(emptyData),
@@ -79,6 +80,15 @@ function LocalProvider({ children }: { children: React.ReactNode }) {
     listMembers: async () => [],
     setMemberBan: async () => {
       throw new Error("La moderación requiere el servidor.");
+    },
+    saveResult: async () => {
+      throw new Error("La carga de resultados requiere el servidor.");
+    },
+    startPlayoffs: async () => {
+      throw new Error("Los playoffs requieren el servidor.");
+    },
+    resetPlayoffs: async () => {
+      throw new Error("Los playoffs requieren el servidor.");
     },
     finishTournament: () =>
       changeNight((n) => {
@@ -167,7 +177,13 @@ function LocalProvider({ children }: { children: React.ReactNode }) {
     confirmPlan: (plan) =>
       changeNight((n) => {
         validatePlan(n, plan);
-        return { ...n, tournaments: plan };
+        return {
+          ...n,
+          tournaments: plan,
+          matches: plan.flatMap((t) =>
+            initialMatches(n.id, t, Crypto.randomUUID),
+          ),
+        };
       }),
     loadDemo: () =>
       update((d) => {

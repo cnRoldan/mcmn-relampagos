@@ -6,6 +6,7 @@ import type { Club, Data, Night, Tournament } from "../domain/tournaments";
 import { emptyData } from "../domain/tournaments";
 import { useTournamentLink } from "../cloud/links";
 import { validateContacts } from "../domain/contacts";
+import type { Match } from "../domain/results";
 import { C, Context, Member } from "./context";
 type TournamentRow = {
   id: string;
@@ -54,6 +55,13 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
         supabase
           .from("registration_notices")
           .select("registration_id,reason,excluded"),
+        supabase
+          .from("competition_matches")
+          .select(
+            "id,night_id,competition_id,phase,round_number,match_number,home_id,away_id,home_goals,away_goals,home_penalties,away_penalties,version",
+          )
+          .order("round_number")
+          .order("match_number"),
       ]);
       const failed = results.find((r) => r.error);
       if (failed?.error)
@@ -89,6 +97,9 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
           graceMinutes: n.grace_minutes,
           effectiveStart: n.effective_start,
           endedAt: n.ended_at,
+          matches: ((results[5].data || []) as Match[]).filter(
+            (m) => m.night_id === n.id,
+          ),
           singleTournament: true,
           clubs: regs
             .filter((r) => r.night_id === n.id)
@@ -191,6 +202,27 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
       });
       setData((d) => ({ ...d, activeId: id }));
     },
+    saveResult: (match, score) =>
+      rpc("save_match_result", {
+        p_match_id: match.id,
+        p_version: match.version,
+        p_home: score.home,
+        p_away: score.away,
+        p_home_penalties: score.homePenalties ?? null,
+        p_away_penalties: score.awayPenalties ?? null,
+      }),
+    startPlayoffs: (competitionId, groupA, groupB) =>
+      rpc("start_playoffs", {
+        p_night_id: current(),
+        p_competition_id: competitionId,
+        p_group_a: groupA,
+        p_group_b: groupB,
+      }),
+    resetPlayoffs: (competitionId) =>
+      rpc("reset_playoffs", {
+        p_night_id: current(),
+        p_competition_id: competitionId,
+      }),
     finishTournament: () =>
       rpc("finish_tournament", { p_tournament_id: current() }),
     extendStart: (minutes) =>
