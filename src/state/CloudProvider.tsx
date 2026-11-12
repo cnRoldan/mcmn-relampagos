@@ -5,6 +5,7 @@ import { useAuth } from "../cloud/AuthProvider";
 import type { Club, Data, Night, Tournament } from "../domain/tournaments";
 import { emptyData } from "../domain/tournaments";
 import { useTournamentLink } from "../cloud/links";
+import { validateContacts } from "../domain/contacts";
 import { C, Context, Member } from "./context";
 type TournamentRow = {
   id: string;
@@ -15,6 +16,7 @@ type TournamentRow = {
   rules: string;
   grace_minutes: number;
   effective_start: string;
+  ended_at: string | null;
 };
 type ClubRow = { id: string; name: string; owner_id: string | null };
 type RegistrationRow = {
@@ -40,7 +42,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     const attempt = ++request.current;
     try {
       const results = await Promise.all([
-        supabase.rpc("list_tournaments"),
+        supabase.rpc("list_tournaments_with_status"),
         supabase.from("clubs").select("id,name,owner_id"),
         supabase
           .from("registrations")
@@ -86,6 +88,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
           rules: n.rules,
           graceMinutes: n.grace_minutes,
           effectiveStart: n.effective_start,
+          endedAt: n.ended_at,
           singleTournament: true,
           clubs: regs
             .filter((r) => r.night_id === n.id)
@@ -188,6 +191,8 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
       });
       setData((d) => ({ ...d, activeId: id }));
     },
+    finishTournament: () =>
+      rpc("finish_tournament", { p_tournament_id: current() }),
     extendStart: (minutes) =>
       rpc("extend_tournament_start", {
         p_tournament_id: current(),
@@ -218,7 +223,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
       rpc("admin_register_club", {
         p_night_id: current(),
         p_name: name.trim(),
-        p_contacts: contacts.map((c) => c.trim()).filter(Boolean),
+        p_contacts: validateContacts(contacts),
       }),
     removeClub: (id) =>
       rpc("set_registration_excluded", {
@@ -232,11 +237,11 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     saveMyClub: (name, contacts) =>
       rpc("create_my_club", {
         p_name: name.trim(),
-        p_contacts: contacts.map((c) => c.trim()).filter(Boolean),
+        p_contacts: validateContacts(contacts),
       }),
     updateContacts: (contacts) =>
       rpc("update_my_contacts", {
-        p_contacts: contacts.map((c) => c.trim()).filter(Boolean),
+        p_contacts: validateContacts(contacts),
       }),
     registerMyClub: (acceptRules = false) => {
       if (!myClub) throw new Error("Crea o vincula tu club primero.");

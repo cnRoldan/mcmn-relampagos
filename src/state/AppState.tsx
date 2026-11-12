@@ -80,6 +80,12 @@ function LocalProvider({ children }: { children: React.ReactNode }) {
     setMemberBan: async () => {
       throw new Error("La moderación requiere el servidor.");
     },
+    finishTournament: () =>
+      changeNight((n) => {
+        if (!n.tournaments.length || n.endedAt)
+          throw new Error("El torneo no está en curso.");
+        return { ...n, endedAt: new Date().toISOString() };
+      }),
     mode: "local",
     isAdmin: true,
     myClub: undefined,

@@ -4,7 +4,18 @@ import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import * as Crypto from "expo-crypto";
 import { useApp } from "../state/AppState";
-import { Button, Badge, Field, Note, Page, Sheet } from "../components/UI";
+import {
+  Button,
+  Badge,
+  Field,
+  Note,
+  Page,
+  Sheet,
+  Confirm,
+} from "../components/UI";
+import { WhatsAppContact } from "../components/WhatsAppContact";
+import { normalizePhone } from "../domain/contacts";
+import { tournamentState } from "../domain/currentTournament";
 import { Check } from "../components/Check";
 import { colors, styles as s } from "../theme";
 import { Routes, TournamentSection } from "../navigation";
@@ -179,11 +190,7 @@ function TournamentList() {
       )}
       {data.nights.map((n) => (
         <View key={n.id} style={s.card}>
-          <Badge>
-            {n.tournaments.length
-              ? "INSCRIPCIÓN CERRADA"
-              : "INSCRIPCIÓN ABIERTA"}
-          </Badge>
+          <Badge>{tournamentState(n).toUpperCase()}</Badge>
           <Text style={s.heading}>{n.name}</Text>
           <Text style={s.text}>Inicio · {startText(n)}</Text>
           <Text style={s.subtitle}>
@@ -310,6 +317,7 @@ function TournamentInfo() {
     <Page title={n.name} subtitle="Torneo relámpago · MCM">
       <Refresh />
       <View style={s.card}>
+        <Badge>{tournamentState(n).toUpperCase()}</Badge>
         <Badge>
           {closed
             ? format(n.tournaments[0].size, n.tournaments[0].format)
@@ -409,6 +417,17 @@ function TournamentInfo() {
                 onPress={() => nav.navigate("Mi Club")}
               />
             </>
+          ) : !myClub.contacts.some((phone) => normalizePhone(phone)) ? (
+            <>
+              <Note>
+                Añade un teléfono de WhatsApp con prefijo internacional antes de
+                inscribir tu club.
+              </Note>
+              <Button
+                label="Configurar WhatsApp de mi club"
+                onPress={() => nav.navigate("Mi Club")}
+              />
+            </>
           ) : (
             <>
               <Text style={s.text}>{myClub.name}</Text>
@@ -492,7 +511,14 @@ function TournamentInfo() {
   );
 }
 function TournamentRegistrations() {
-  const { night: n, isAdmin, addClub, setExcluded, assignCaptain } = useApp();
+  const {
+    night: n,
+    myClub,
+    isAdmin,
+    addClub,
+    setExcluded,
+    assignCaptain,
+  } = useApp();
   const [add, setAdd] = useState(false),
     [name, setName] = useState(""),
     [phones, setPhones] = useState(["", "", ""]),
@@ -541,11 +567,17 @@ function TournamentRegistrations() {
               : ""}
           </Text>
           {c.excluded && c.exclusionReason && <Note>{c.exclusionReason}</Note>}
-          {c.contacts.map((phone, i) => (
-            <Text key={i} style={s.text}>
-              {phone}
-            </Text>
-          ))}
+          {(isAdmin ||
+            n.clubs.some((own) => own.id === myClub?.id && !own.excluded)) &&
+            c.id !== myClub?.id &&
+            !c.excluded &&
+            !n.endedAt && (
+              <WhatsAppContact
+                phones={c.contacts}
+                fromClub={myClub?.name || "la organización"}
+                tournamentName={n.name}
+              />
+            )}
           {isAdmin && !c.captainId && (
             <Button
               secondary
@@ -583,7 +615,13 @@ function TournamentRegistrations() {
           {phones.map((v, i) => (
             <Field
               key={i}
-              label={`Contacto ${i + 1} · opcional`}
+              label={
+                i === 0
+                  ? "WhatsApp del capitán · obligatorio"
+                  : `Contacto ${i + 1} · opcional`
+              }
+              phone
+              placeholder="+34 612 345 678"
               value={v}
               maxLength={24}
               onChangeText={(v) =>
@@ -702,7 +740,7 @@ function shuffle(ids: string[]) {
   return a;
 }
 function TournamentCompetition() {
-  const { night: n, isAdmin, confirmPlan } = useApp(),
+  const { night: n, isAdmin, confirmPlan, finishTournament } = useApp(),
     nav = useTournamentNav();
   const clubs = n ? eligible(n) : [],
     size = clubs.length as Size,
@@ -810,6 +848,15 @@ function TournamentCompetition() {
             </Text>
           )}
         </View>
+      )}
+      {confirmed && <Badge>{tournamentState(n).toUpperCase()}</Badge>}
+      {confirmed && isAdmin && !n.endedAt && (
+        <Confirm
+          label="Finalizar torneo"
+          title="Finalizar torneo"
+          message="El torneo dejará de aparecer como actual en Inicio. Su competición se conservará en Torneos."
+          onConfirm={finishTournament}
+        />
       )}
       {shown && (
         <>

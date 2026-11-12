@@ -19,6 +19,7 @@ export type Context = {
     time: string,
     rules?: string,
   ) => Promise<void>;
+  finishTournament: () => Promise<void>;
   extendStart: (minutes: number) => Promise<void>;
   setExcluded: (
     clubId: string,

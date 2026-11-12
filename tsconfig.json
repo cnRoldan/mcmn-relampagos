@@ -10,6 +10,10 @@
   },
   "exclude": [
     "node_modules",
-    "supabase/functions"
+    "supabase/functions",
+    "dist",
+    "web-build",
+    "web-preview",
+    "artifacts"
   ]
 }

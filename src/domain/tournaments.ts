@@ -24,6 +24,7 @@ export type Night = {
   clubs: Club[];
   tournaments: Tournament[];
   demo?: boolean;
+  endedAt?: string | null;
   rules?: string;
   graceMinutes?: number;
   effectiveStart?: string;

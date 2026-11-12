@@ -11,7 +11,7 @@ export type PublicTournament = {
   play_date: string;
   start_time: string;
   rules: string;
-  status: "open" | "closed";
+  status: "open" | "closed" | "finished";
   grace_minutes: number;
   effective_start: string;
   registered_count: number;
@@ -109,7 +109,9 @@ export function SharedTournament({
               <Note>
                 {info.status === "open"
                   ? "Inscripción abierta. La organización confirmará los participantes y decidirá Copa o Liga."
-                  : "La inscripción de este torneo está cerrada."}
+                  : info.status === "finished"
+                    ? "Este torneo ha finalizado."
+                    : "Torneo en curso. Las inscripciones están cerradas."}
               </Note>
             </View>
             <View style={s.card}>

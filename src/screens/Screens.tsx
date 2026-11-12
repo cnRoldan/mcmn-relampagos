@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Text, View, Pressable, ActivityIndicator } from "react-native";
+import { Text, View, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import { tournamentTime } from "./SharedTournament";
@@ -17,7 +17,12 @@ import {
 } from "../components/UI";
 import { BrandLogo } from "../components/BrandLogo";
 import { colors, styles as s } from "../theme";
-import type { Routes, TournamentSection } from "../navigation";
+import {
+  currentTournament,
+  tournamentState,
+} from "../domain/currentTournament";
+import { WhatsAppContact } from "../components/WhatsAppContact";
+import type { Routes } from "../navigation";
 const message = (e: unknown) =>
   e instanceof Error
     ? e.message
@@ -61,161 +66,128 @@ function LocalNote() {
   return (
     <Note>
       {mode === "cloud"
-        ? "Inscripciones por orden de llegada, confirmado en servidor. Los contactos solo son visibles para su capitán y los administradores."
+        ? "Inscripciones por orden de llegada. Los teléfonos se comparten con los capitanes del mismo torneo y los administradores para coordinar por WhatsApp."
         : "Versión de prueba · Datos guardados solo en este dispositivo."}
     </Note>
   );
 }
 export function Home() {
-  const { night, loadDemo, ready, error, mode, isAdmin } = useApp(),
-    nav = useNavigation<DrawerNavigationProp<Routes>>(),
-    [busy, setBusy] = useState(false),
-    [err, setErr] = useState("");
+  const { data, myClub, ready, error, isAdmin } = useApp();
+  const nav = useNavigation<DrawerNavigationProp<Routes>>();
+  const current = currentTournament(data.nights);
+  const clubs =
+    current?.clubs
+      .filter((c) => !c.excluded)
+      .sort(
+        (a, b) => (a.registrationOrder ?? 0) - (b.registrationOrder ?? 0),
+      ) || [];
+  const canContact =
+    isAdmin || !!(myClub && clubs.some((c) => c.id === myClub.id));
   return (
-    <Page
-      title="Tu torneo empieza aquí"
-      subtitle="Organiza los clubes. Prepara los cruces. Que ruede el balón."
-    >
+    <Page title="Inicio" subtitle="Tu torneo relámpago, de un vistazo.">
       <Status />
-      <View
-        style={[
-          s.card,
-          {
-            backgroundColor: colors.dark,
-            borderColor: colors.dark,
-            padding: 25,
-          },
-        ]}
-      >
-        <BrandLogo />
-        <Text style={[s.eyebrow, { color: colors.accent }]}>
-          TORNEOS MCM · CLUBES PRO
-        </Text>
-        <Text
-          style={{
-            fontSize: 38,
-            fontWeight: "900",
-            color: colors.white,
-            lineHeight: 43,
-          }}
-        >
-          {night ? night.name : "POCO TIEMPO.\nMUCHO FÚTBOL."}
-        </Text>
-        <Text style={{ fontSize: 14, lineHeight: 23, color: colors.onDark }}>
-          {night
-            ? night.effectiveStart
-              ? `${tournamentTime(night.effectiveStart)} · Madrid`
-              : `${showDate(night.date)} · ${night.time} h · Madrid`
-            : "Prepara los relámpagos de tu comunidad de Clubes Pro."}
-        </Text>
-        {night && (
-          <Badge>
-            {night.demo
-              ? "TORNEO DE EJEMPLO"
-              : night.tournaments.length
-                ? "REPARTO CONFIRMADO"
-                : "INSCRIPCIONES ABIERTAS"}
-          </Badge>
-        )}
-        <Button
-          label={
-            night
-              ? "Ver torneo →"
-              : isAdmin
-                ? "Crear mi primer torneo →"
-                : "Ver torneos →"
-          }
-          accent
-          onPress={() =>
-            nav.navigate("Torneos", {
-              section: night ? "Información" : "Listado",
-              tournamentId: night?.id,
-            })
-          }
-        />
-      </View>
-      <View style={s.row}>
-        {[
-          ["Clubes", night?.clubs.length || 0],
-          [
-            "Participantes",
-            night?.clubs.filter((c) => !c.excluded).length || 0,
-          ],
-          ["Máx. partidos", 5],
-        ].map(([label, v]) => (
-          <View key={label} style={[s.card, { flex: 1, padding: 13, gap: 5 }]}>
-            <Text
-              style={{ fontSize: 30, fontWeight: "800", color: colors.ink }}
-            >
-              {v}
-            </Text>
-            <Text style={{ fontSize: 10, color: colors.muted }}>{label}</Text>
-          </View>
-        ))}
-      </View>
-      <Text style={s.heading}>De la lista al campo</Text>
-      {[
-        [
-          "01",
-          "Reúne a tu comunidad",
-          "Inscribe clubes sin registrar jugadores ni plantillas.",
-          "Inscritos",
-        ],
-        [
-          "02",
-          "Prepara la competición",
-          "El administrador decidirá Copa o Liga según los participantes.",
-          "Competición",
-        ],
-      ].map(([num, title, desc, route]) => (
-        <Pressable
-          key={num}
-          accessibilityRole="button"
-          onPress={() =>
-            nav.navigate("Torneos", { section: route as TournamentSection })
-          }
-          style={[
-            s.card,
-            { flexDirection: "row", gap: 15, alignItems: "center" },
-          ]}
-        >
-          <Text
-            style={{ color: colors.primary, fontSize: 22, fontWeight: "800" }}
-          >
-            {num}
+      {!ready ? (
+        <Note>Cargando el torneo actual…</Note>
+      ) : !current ? (
+        <View style={s.card}>
+          <Badge>SIN TORNEO ACTUAL</Badge>
+          <Text style={s.heading}>
+            {error
+              ? "No se pudo cargar el torneo"
+              : "Aún no hay un torneo activo"}
           </Text>
-          <View style={{ flex: 1, gap: 5 }}>
-            <Text
-              style={{ fontSize: 16, fontWeight: "700", color: colors.ink }}
-            >
-              {title}
-            </Text>
-            <Text style={s.subtitle}>{desc}</Text>
-          </View>
-          <Text style={s.text}>›</Text>
-        </Pressable>
-      ))}
-      {!night && mode === "local" && (
-        <>
+          <Text style={s.subtitle}>
+            {error
+              ? "Pulsa Actualizar para volver a intentarlo."
+              : "Aquí verás el próximo torneo y sus equipos en cuanto la organización lo prepare."}
+          </Text>
           <Button
-            label={busy ? "Cargando…" : "Explorar con 8 clubes de ejemplo"}
-            disabled={busy || !ready || !!error}
-            secondary
-            onPress={async () => {
-              setBusy(true);
-              try {
-                await loadDemo();
-              } catch (e) {
-                setErr(message(e));
-              } finally {
-                setBusy(false);
-              }
-            }}
+            label={isAdmin ? "Crear torneo" : "Ver torneos"}
+            onPress={() => nav.navigate("Torneos", { section: "Listado" })}
           />
-          {!!err && <Text style={s.error}>{err}</Text>}
+        </View>
+      ) : (
+        <>
+          <View
+            style={[
+              s.card,
+              { backgroundColor: colors.dark, borderColor: colors.dark },
+            ]}
+          >
+            <Badge>{tournamentState(current).toUpperCase()}</Badge>
+            <Text style={[s.heading, { color: colors.white, fontSize: 28 }]}>
+              {current.name}
+            </Text>
+            <Text
+              style={{ color: colors.onDark, fontSize: 15, lineHeight: 22 }}
+            >
+              {current.effectiveStart
+                ? tournamentTime(current.effectiveStart)
+                : `${showDate(current.date)} · ${current.time} h`}{" "}
+              · Madrid
+            </Text>
+            <Text style={{ color: colors.onDark, lineHeight: 22 }}>
+              {current.tournaments.length
+                ? "El torneo ya ha comenzado. Consulta la competición y contacta con los otros capitanes."
+                : "Los clubes se están apuntando. La organización decidirá el formato y confirmará el inicio."}
+            </Text>
+            <Button
+              accent
+              label={
+                current.tournaments.length
+                  ? "Ver competición"
+                  : "Ver torneo e inscribirme"
+              }
+              onPress={() =>
+                nav.navigate("Torneos", {
+                  tournamentId: current.id,
+                  section: current.tournaments.length
+                    ? "Competición"
+                    : "Información",
+                })
+              }
+            />
+          </View>
+          <Text style={s.heading}>Equipos apuntados · {clubs.length}</Text>
+          {!clubs.length && (
+            <Note>
+              Todavía no hay equipos apuntados. Sé el primero en inscribir tu
+              club.
+            </Note>
+          )}
+          {clubs.map((club, i) => (
+            <View key={club.id} style={s.card}>
+              <View style={s.row}>
+                <Text style={[s.heading, { flex: 1 }]}>{club.name}</Text>
+                {club.id === myClub?.id && <Badge>TU CLUB</Badge>}
+              </View>
+              <Text style={s.subtitle}>
+                Inscripción #{club.registrationOrder ?? i + 1}
+              </Text>
+              {canContact && club.id !== myClub?.id && (
+                <WhatsAppContact
+                  phones={club.contacts}
+                  fromClub={myClub?.name || "la organización"}
+                  tournamentName={current.name}
+                />
+              )}
+              {canContact &&
+                club.id !== myClub?.id &&
+                !club.contacts.length && (
+                  <Text style={s.subtitle}>
+                    Teléfono pendiente de configurar.
+                  </Text>
+                )}
+            </View>
+          ))}
+          {!canContact && (
+            <Note>
+              Inscribe tu club para contactar por WhatsApp con los capitanes de
+              este torneo.
+            </Note>
+          )}
         </>
       )}
-      <LocalNote />
     </Page>
   );
 }
@@ -312,7 +284,8 @@ export function MyClub() {
             <Badge>TU CLUB</Badge>
             <Text style={s.heading}>{myClub.name}</Text>
             <Text style={s.subtitle}>
-              Contactos privados · visibles para ti y para los administradores.
+              WhatsApp del club · visible para los capitanes inscritos en tu
+              mismo torneo y los administradores.
             </Text>
             {myClub.contacts.length ? (
               myClub.contacts.map((phone, i) => (
@@ -321,11 +294,13 @@ export function MyClub() {
                 </Text>
               ))
             ) : (
-              <Text style={s.subtitle}>Sin contactos añadidos.</Text>
+              <Text style={s.subtitle}>
+                Añade un teléfono de WhatsApp para poder inscribir tu club.
+              </Text>
             )}
             <Button
               secondary
-              label="Editar contactos"
+              label="Editar WhatsApp"
               onPress={() => {
                 setContacts([0, 1, 2].map((i) => myClub.contacts[i] || ""));
                 setError("");
@@ -424,13 +399,20 @@ export function MyClub() {
             />
           )}
           <Note>
-            Hasta tres teléfonos opcionales. No se publican en la lista de
-            inscritos.
+            Añade al menos un teléfono de WhatsApp con prefijo internacional
+            (por ejemplo +34 612 345 678). Podrán verlo los capitanes inscritos
+            en tu mismo torneo y los administradores.
           </Note>
           {contacts.map((v, i) => (
             <Field
               key={i}
-              label={`Contacto ${i + 1} · opcional`}
+              label={
+                i === 0
+                  ? "WhatsApp del capitán · obligatorio"
+                  : `Contacto ${i + 1} · opcional`
+              }
+              phone
+              placeholder="+34 612 345 678"
               value={v}
               onChangeText={(v) =>
                 setContacts((a) => a.map((x, j) => (i === j ? v : x)))

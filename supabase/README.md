@@ -20,7 +20,7 @@ Las RPCs usan `SECURITY DEFINER` de forma intencional, fijan `search_path` vací
 
 ## Validación
 
-Diecisiete pruebas pasan, incluidas cinco suites de PostgreSQL sobre RLS, formatos, normas, margen, exclusiones y baneos. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
+Veinte pruebas pasan, incluidas seis suites de PostgreSQL sobre RLS, formatos, normas, margen, exclusiones y baneos. También se ha comprobado que el servidor publicado rechaza accesos incorrectos y bloquea el correo de autenticación y los contactos para peticiones anónimas. La interfaz de capitán se ha probado con respuestas de API simuladas, incluida inscripción con número 2 y cierre de sesión.
 
 La revisión automática rechazó crear usuarios QA directamente en Auth y elevar uno a administrador. No se crearon esos usuarios ni se intentó eludir el bloqueo. Por tanto, falta verificar un inicio de sesión válido y una inscripción con cuentas reales después de registrar al propietario.
 
@@ -42,3 +42,11 @@ Los motivos de exclusión se guardan en `registration_notices`, con RLS para pro
 No se crean cuentas QA privilegiadas en el servidor: la denegación previa de revisión automática se respeta. Las pruebas de cuentas y roles se ejecutan de forma aislada; los recorridos visuales usan API simulada.
 
 La auditoría también indica que la protección de contraseñas filtradas de Supabase está desactivada ([configuración](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)); esta entrega no cambia esa configuración.
+
+## Inicio y WhatsApp
+
+`home_and_whatsapp` añade `ended_at` y la RPC administrativa `finish_tournament`, con búsqueda vacía y concesiones limitadas. No marca campeones ni resultados. `list_tournaments_with_status` usa SECURITY INVOKER y conserva el endpoint anterior para clientes existentes; la ficha pública sigue sin exponer teléfonos.
+
+La política `contact_read` permite a capitanes activos acceder a los contactos de otros clubes no excluidos cuando ambos están inscritos en el mismo torneo no finalizado. Fuera de ese caso, solo propietario y administradores. Se comprueba sobre la sesión y registros actuales, no sobre metadatos del cliente. Un índice por club/torneo respalda la consulta.
+
+`check_contacts` exige de uno a tres teléfonos válidos con prefijo internacional explícito. Un trigger comprueba este requisito en cada nueva inscripción, también para clubes existentes sin teléfono. Los registros anteriores se conservan. WhatsApp usa HTTPS `wa.me` y un mensaje preparado; abrir el chat requiere tocar el botón y no envía el mensaje.

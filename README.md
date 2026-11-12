@@ -6,6 +6,8 @@ App independiente de ConvoSquad, con React Native, Expo y TypeScript para iOS, A
 
 Menú lateral: Inicio, Torneos, Mi Club, Palmarés y Ajustes. Torneos abre una lista de competiciones. Cada ficha reúne Información, Inscritos y Competición. «Noches de juego» desaparece de la interfaz; el nombre de tabla `nights` se conserva solo como detalle interno de compatibilidad.
 
+Inicio muestra el torneo en curso; si no lo hay, el primero en preparación por fecha. La selección de otro torneo en el listado no altera Inicio. Se muestran los equipos que siguen dentro, por orden de llegada. «Finalizar torneo» en Competición lo retira de Inicio sin borrar su historial ni asignar resultados.
+
 Un administrador crea el torneo con nombre, fecha, hora de inicio de Madrid y normas. Los capitanes pueden apuntarse mientras siga abierto, incluso si la hora prevista ha pasado: no se cierra por reloj ni se elige un formato automáticamente. El administrador puede ampliar la hora visible y confirmar el formato a partir de esa hora efectiva.
 
 Cada nuevo torneo admite una única Copa o Liga. Los clubes que quedan fuera conservan su inscripción y número de llegada; nunca se reparten automáticamente entre otros torneos. Los repartos antiguos siguen siendo legibles.
@@ -33,7 +35,7 @@ Proyecto Supabase independiente `mkbvplehrbjrufhkcqun`, en la organización eleg
 
 - Alta y acceso por ID de EA y contraseña de MCM de al menos ocho caracteres. No se solicita correo. La identidad interna de Supabase usa un dominio `.invalid` sin correspondencia real.
 - Cada alta es capitán. El rol administrativo se concede desde el servidor tras identificar al propietario; nunca se toma de metadatos editables por el usuario.
-- Cada capitán representa un club. Si se añadió manualmente, el administrador puede vincularlo a su cuenta. Los contactos opcionales (hasta tres) solo se leen por su capitán y los administradores.
+- Cada capitán representa un club. Si se añadió manualmente, el administrador puede vincularlo a su cuenta. Cada club necesita al menos un teléfono con prefijo internacional (máximo tres). Además del propietario y administradores, pueden leerlo los capitanes de clubes no excluidos que compartan un torneo no finalizado. Inicio e Inscritos permiten abrir un chat de WhatsApp con un mensaje preparado; nunca se envía automáticamente.
 - Las inscripciones se serializan por torneo, con hora y número asignados en servidor. Un capitán no puede inscribir otro club ni volver a entrar por su cuenta tras quedar excluido.
 - El administrador puede excluir o readmitir un club antes de confirmar la competición. El motivo queda en un aviso privado visible para el capitán y administradores. La readmisión conserva el número original.
 - Los baneos de cuentas se gestionan desde Ajustes. Bloquean nuevas acciones y lecturas privadas incluso con un token anterior; los torneos abiertos dejan su club fuera. No cambian partidos confirmados. Quitar un baneo no readmite automáticamente los clubes y no se permite banear administradores desde esta pantalla.

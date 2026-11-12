@@ -85,6 +85,7 @@ export function Field({
   numeric = false,
   secure = false,
   email = false,
+  phone = false,
   autoCapitalize,
   maxLength = 70,
   multiline = false,
@@ -96,6 +97,7 @@ export function Field({
   numeric?: boolean;
   secure?: boolean;
   email?: boolean;
+  phone?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   maxLength?: number;
   multiline?: boolean;
@@ -116,7 +118,7 @@ export function Field({
         placeholder={placeholder}
         placeholderTextColor={colors.placeholder}
         keyboardType={
-          email ? "email-address" : numeric ? "number-pad" : "default"
+          phone ? "phone-pad" : email ? "email-address" : numeric ? "number-pad" : "default"
         }
         secureTextEntry={secure}
         autoCorrect={!(secure || email || autoCapitalize === "none")}
