@@ -20,7 +20,7 @@ export function PrivacyPolicyButton() {
       />
       {open && (
         <Sheet title="Tratamiento de datos" onClose={() => setOpen(false)}>
-          <Text style={s.subtitle}>MCM · Versión {privacyVersion}</Text>
+          <Text style={s.subtitle}>MCMN · Versión {privacyVersion}</Text>
           {privacyDraft && (
             <Note>
               Borrador de desarrollo: falta completar la identidad y el contacto

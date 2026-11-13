@@ -167,7 +167,7 @@ function TournamentList() {
     [busy, setBusy] = useState(false),
     [err, setErr] = useState("");
   return (
-    <Page title="Torneos" subtitle="Elige tu próximo relámpago de MCM.">
+    <Page title="Torneos" subtitle="Elige tu próximo relámpago de MCMN.">
       <Refresh />
       {isAdmin && (
         <Button
@@ -317,7 +317,7 @@ function TournamentInfo() {
       : undefined,
     closed = !!n.tournaments.length;
   return (
-    <Page title={n.name} subtitle="Torneo relámpago · MCM">
+    <Page title={n.name} subtitle="Torneo relámpago · MCMN">
       <Refresh />
       <View style={s.card}>
         <Badge>{tournamentState(n).toUpperCase()}</Badge>

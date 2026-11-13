@@ -1,4 +1,4 @@
-name: Comprobaciones MCM
+name: Comprobaciones MCMN
 on:
   push:
     branches: [main]

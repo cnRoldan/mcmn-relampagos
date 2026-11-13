@@ -209,7 +209,7 @@ export function Settings() {
   const { mode, reset } = useApp(),
     { profile, signOut, error, reloadProfile } = useAuth();
   return (
-    <Page title="Ajustes" subtitle="MCM · Torneos Relámpago">
+    <Page title="Ajustes" subtitle="MCMN · Torneos Relámpago">
       <View style={s.card}>
         <Text style={s.heading}>
           {profile ? profile.ea_id : "Una app para tu comunidad"}

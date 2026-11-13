@@ -14,7 +14,7 @@ export function BrandLogo() {
     >
       <Image
         source={require("../../assets/mcm-logo.jpg")}
-        accessibilityLabel="MCM · Torneos Relámpago"
+        accessibilityLabel="MCMN · Torneos Relámpago"
         accessible
         resizeMode="contain"
         style={{ width: "100%", height: "100%" }}

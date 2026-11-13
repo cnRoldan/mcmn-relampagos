@@ -1,4 +1,4 @@
-# MCM · Torneos Relámpago
+# MCMN · Mi cancha, mis normas
 
 App independiente de ConvoSquad, con React Native, Expo y TypeScript para iOS, Android y tablet. La vista web del mismo código se publica en https://mcm-torneos-relampago.netlify.app para revisar cambios juntos.
 
@@ -41,7 +41,7 @@ Las eliminatorias empatadas requieren una tanda de penaltis con ganador. Sus gol
 
 Proyecto Supabase independiente `mkbvplehrbjrufhkcqun`, en la organización elegida por el propietario. No se han copiado cuentas ni datos de ConvoSquad.
 
-- Alta y acceso por ID de EA y contraseña de MCM de al menos ocho caracteres. No se solicita correo. La identidad interna de Supabase usa un dominio `.invalid` sin correspondencia real.
+- Alta y acceso por ID de EA y contraseña de MCMN de al menos ocho caracteres. No se solicita correo. La identidad interna de Supabase usa un dominio `.invalid` sin correspondencia real.
 - Cada alta es capitán. El rol administrativo se concede desde el servidor tras identificar al propietario; nunca se toma de metadatos editables por el usuario.
 - Cada capitán representa un club. Si se añadió manualmente, el administrador puede vincularlo a su cuenta. Cada club necesita al menos un teléfono con prefijo internacional (máximo tres). Además del propietario y administradores, pueden leerlo los capitanes de clubes no excluidos que compartan un torneo no finalizado. Inicio e Inscritos permiten abrir un chat de WhatsApp con un mensaje preparado; nunca se envía automáticamente.
 - Las inscripciones se serializan por torneo, con hora y número asignados en servidor. Un capitán no puede inscribir otro club ni volver a entrar por su cuenta tras quedar excluido.
@@ -66,14 +66,14 @@ Mi Club permite eliminar el club escribiendo su nombre exacto. Se borran teléfo
 
 Ajustes permite eliminar perfil y cuenta escribiendo ELIMINAR y la contraseña actual. `account-delete` verifica el JWT con Auth y vuelve a comprobar la contraseña en servidor; no acepta una identidad objetivo del cliente. Una preparación de servicio borra los datos del club y bloquea la cuenta antes de revocar sesiones y eliminar el usuario de Auth. Las relaciones de autoría pasan a NULL, y el perfil se elimina por cascada. Si falla Auth, la cuenta queda sin acceso privado y permite reintentar. La misma opción está disponible para cuentas suspendidas; su autenticación no concede acceso a torneos ni teléfonos.
 
-No se borran cuentas reales como prueba. Los casos de supresión, permisos, tokens antiguos y recuperación tras fallo se validan en PostgreSQL aislado, con servicios simulados y recorridos web interceptados. No se garantiza eliminación inmediata de los registros técnicos o copias de los proveedores ni de contactos o mensajes guardados fuera de MCM.
+No se borran cuentas reales como prueba. Los casos de supresión, permisos, tokens antiguos y recuperación tras fallo se validan en PostgreSQL aislado, con servicios simulados y recorridos web interceptados. No se garantiza eliminación inmediata de los registros técnicos o copias de los proveedores ni de contactos o mensajes guardados fuera de MCMN.
 
 ## Desarrollo y validación
 
 ```sh
 npm ci
 cp .env.example .env
-# Completar solo la URL y la clave publicable del proyecto MCM.
+# Completar solo la URL y la clave publicable del proyecto MCMN.
 npx expo start
 npm run typecheck
 npm test
@@ -101,15 +101,15 @@ npx --yes netlify-cli deploy --prod --dir dist --no-build
 Reglas avanzadas de desempate, campeones y Palmarés, recuperación de cuentas, varios capitanes por club, notificaciones push y nuevas combinaciones de grupos. Las normas se fijan al crear el torneo; editar reglas tras abrir inscripciones requerirá versionar su aceptación.
 
 
-## EA y ELO MCM (primera versión)
+## EA y ELO MCMN (primera versión)
 
-Mi Club permite comprobar un enlace público o ID de EA y solicitar su vinculación. Un administrador valida que representa al club de MCM. El pool `common-gen5` reúne PS5, Xbox Series y PC; se conserva junto al ID y la edición `fc27`, porque el ID por sí solo no identifica un club entre plataformas y ediciones. Un club EA solo puede vincularse a un club MCM en esa edición/pool. Cambiar el vínculo exige no tener importaciones activas; eliminar el club retira el vínculo personal y candidatos, conservando el resultado deportivo mínimo.
+Mi Club permite comprobar un enlace público o ID de EA y solicitar su vinculación. Un administrador valida que representa al club de MCMN. El pool `common-gen5` reúne PS5, Xbox Series y PC; se conserva junto al ID y la edición `fc27`, porque el ID por sí solo no identifica un club entre plataformas y ediciones. Un club EA solo puede vincularse a un club MCMN en esa edición/pool. Cambiar el vínculo exige no tener importaciones activas; eliminar el club retira el vínculo personal y candidatos, conservando el resultado deportivo mínimo.
 
 En cada cruce programado, «Buscar resultado en EA» consulta desde el servidor los últimos diez `friendlyMatch` del club local. Filtra por ambos clubes, fecha posterior al inicio efectivo del torneo y a la validación de ambos vínculos, goles recíprocos y ausencia de abandono. Guarda solo esos candidatos saneados, sin jugadores ni el resto del historial EA. No consulta EA en cada refresco de pantalla ni importa en segundo plano. No hay paginación conocida: conviene revisar poco después del partido. Se pueden recuperar candidatos ya guardados en búsquedas anteriores mientras siga vigente su contexto.
 
-El administrador selecciona el candidato, revisa su fecha y confirma que corresponde a la jornada MCM. Coincidir por clubes y fecha es una ayuda, no una prueba automática. Una fuente EA no puede puntuar en dos encuentros MCM. Un capitán no puede importar ni validar su propio vínculo. Versiones de partido y vínculo impiden importar búsquedas que quedaron obsoletas. Los empates de eliminatoria requieren introducir la tanda manualmente; abandonos y ausencia de datos se resuelven mediante el registro administrativo. Para cambiar un marcador importado primero se deja pendiente, con las mismas restricciones de playoffs de los resultados manuales.
+El administrador selecciona el candidato, revisa su fecha y confirma que corresponde a la jornada MCMN. Coincidir por clubes y fecha es una ayuda, no una prueba automática. Una fuente EA no puede puntuar en dos encuentros MCMN. Un capitán no puede importar ni validar su propio vínculo. Versiones de partido y vínculo impiden importar búsquedas que quedaron obsoletas. Los empates de eliminatoria requieren introducir la tanda manualmente; abandonos y ausencia de datos se resuelven mediante el registro administrativo. Para cambiar un marcador importado primero se deja pendiente, con las mismas restricciones de playoffs de los resultados manuales.
 
-La base es **1000 ELO**, **K=32** y expectativa `1/(1+10^((rival-propio)/400))`. Victoria=1, empate=0,5, derrota=0; en eliminatorias decide la tanda. Se computan todos los resultados oficiales confirmados en MCM, tanto importados como introducidos por administración. Ningún partido externo suma. Los goles se registran en estadísticas; rojas solo cuando EA las aporta (ausencia no significa cero). Las amarillas no tienen un campo validado. **No se han definido ni activado bonificaciones por goles, tarjetas o títulos.**
+La base es **1000 ELO**, **K=32** y expectativa `1/(1+10^((rival-propio)/400))`. Victoria=1, empate=0,5, derrota=0; en eliminatorias decide la tanda. Se computan todos los resultados oficiales confirmados en MCMN, tanto importados como introducidos por administración. Ningún partido externo suma. Los goles se registran en estadísticas; rojas solo cuando EA las aporta (ausencia no significa cero). Las amarillas no tienen un campo validado. **No se han definido ni activado bonificaciones por goles, tarjetas o títulos.**
 
 El registro de ELO guarda antes/después, variación y versión `elo-v1-k32` para ambos clubes. Corregir, dejar pendiente o reiniciar eliminatorias reconstruye la secuencia cronológica de resultados; no duplica puntos. Se ordena por fecha EA o primera confirmación manual y UUID como desempate. Mi Club muestra total y un historial paginado de 50 partidos con torneo, jornada, rival y origen. La reconstrucción íntegra es adecuada para este volumen inicial; al crecer se deberá pasar a reconstrucción incremental desde el resultado modificado.
 
@@ -118,4 +118,4 @@ El registro de ELO guarda antes/después, variación y versión `elo-v1-k32` par
 
 ## Desarrollo con Codex
 
-Repositorio privado previsto (pendiente de creación): https://github.com/cnRoldan/mcm-relampagos. Las reglas para nuevas tareas están en `AGENTS.md` y el estado pendiente de publicación en `docs/CONTINUIDAD.md`. Configurar el entorno con Node.js 24 y `bash scripts/codex-setup.sh`. GitHub Actions comprueba TypeScript y las pruebas en cada push a main y pull request. El flujo de comprobaciones no despliega cambios a producción.
+Repositorio público (visibilidad autorizada por el propietario): https://github.com/cnRoldan/mcmn-relampagos. Las reglas para nuevas tareas están en `AGENTS.md` y el estado pendiente de publicación en `docs/CONTINUIDAD.md`. Configurar el entorno con Node.js 24 y `bash scripts/codex-setup.sh`. GitHub Actions comprueba TypeScript y las pruebas en cada push a main y pull request. El flujo de comprobaciones no despliega cambios a producción.

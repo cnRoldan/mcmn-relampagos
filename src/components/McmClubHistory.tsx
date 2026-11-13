@@ -37,7 +37,7 @@ export function McmClubHistory({ club }: { club: Club }) {
   }, [club.id, fingerprint, stats?.rating, stats?.gf, stats?.ga]);
   return (
     <View style={s.card}>
-      <Text style={s.heading}>ELO e historial MCM</Text>
+      <Text style={s.heading}>ELO e historial MCMN</Text>
       <Text style={{ fontSize: 32, color: colors.primary, fontWeight: "900" }}>
         {Math.round(stats?.rating ?? 1000)} ELO
       </Text>
@@ -49,7 +49,7 @@ export function McmClubHistory({ club }: { club: Club }) {
         GF {stats?.gf ?? 0} · GC {stats?.ga ?? 0}
       </Text>
       <Note>
-        Solo cuentan resultados confirmados de MCM. El ELO cambia según el
+        Solo cuentan resultados confirmados de MCMN. El ELO cambia según el
         resultado y la fuerza del rival; goles, tarjetas y títulos no añaden
         bonificaciones en esta versión.
       </Note>

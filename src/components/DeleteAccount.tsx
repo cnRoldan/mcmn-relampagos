@@ -37,7 +37,7 @@ export function DeleteAccount() {
           }}
         >
           <Note>
-            Se eliminarán tu perfil y tu acceso a MCM. También se borrarán los
+            Se eliminarán tu perfil y tu acceso a MCMN. También se borrarán los
             teléfonos de tu club y sus inscripciones en torneos no iniciados.
             Los partidos y resultados anteriores se conservarán con un club
             genérico, sin vincularlo a ti. Esta acción es definitiva.

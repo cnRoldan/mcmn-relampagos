@@ -11,7 +11,7 @@ export const privacySections = [
     text:
       dataController.name && dataController.email
         ? `Responsable: ${dataController.name}. Contacto de privacidad: ${dataController.email}.`
-        : "MCM · Torneos Relámpago está en desarrollo. La identidad legal del responsable y el correo de privacidad están pendientes de completar por la organización. Este aviso describe el funcionamiento actual y seguirá como borrador hasta completar esos datos.",
+        : "MCMN · Torneos Relámpago está en desarrollo. La identidad legal del responsable y el correo de privacidad están pendientes de completar por la organización. Este aviso describe el funcionamiento actual y seguirá como borrador hasta completar esos datos.",
   },
   {
     title: "Datos que tratamos",
@@ -27,15 +27,15 @@ export const privacySections = [
   },
   {
     title: "Vinculación y resultados de EA",
-    text: "Puedes vincular el identificador público de un club de EA, su nombre, edición y grupo de plataformas. La organización valida la correspondencia; no pedimos credenciales de EA ni verificamos la titularidad de esa cuenta. El servidor consulta información pública de EA y conserva únicamente los candidatos que coinciden con un cruce programado de MCM, su fecha, marcador y tarjetas rojas disponibles. No guardamos los nombres, identificadores ni estadísticas individuales de jugadores devueltos por EA. Un administrador confirma el partido antes de incorporarlo a clasificaciones, ELO e historial por jornada. El historial general de EA no puntúa en MCM. Las amarillas no se consideran verificadas y no generan penalizaciones. La consulta pública del nombre de un club puede almacenarse temporalmente como caché técnica, sin vincularlo a una cuenta MCM.",
+    text: "Puedes vincular el identificador público de un club de EA, su nombre, edición y grupo de plataformas. La organización valida la correspondencia; no pedimos credenciales de EA ni verificamos la titularidad de esa cuenta. El servidor consulta información pública de EA y conserva únicamente los candidatos que coinciden con un cruce programado de MCMN, su fecha, marcador y tarjetas rojas disponibles. No guardamos los nombres, identificadores ni estadísticas individuales de jugadores devueltos por EA. Un administrador confirma el partido antes de incorporarlo a clasificaciones, ELO e historial por jornada. El historial general de EA no puntúa en MCMN. Las amarillas no se consideran verificadas y no generan penalizaciones. La consulta pública del nombre de un club puede almacenarse temporalmente como caché técnica, sin vincularlo a una cuenta MCMN.",
   },
   {
     title: "WhatsApp",
-    text: "Al tocar el botón de WhatsApp se abre un enlace wa.me con el teléfono del destinatario y un mensaje preparado que incluye el nombre de tu club y del torneo. La app no envía el mensaje por ti. A partir de ese momento se aplica la política de WhatsApp. La eliminación en MCM no borra mensajes, contactos o copias que otras personas hayan guardado fuera de la app.",
+    text: "Al tocar el botón de WhatsApp se abre un enlace wa.me con el teléfono del destinatario y un mensaje preparado que incluye el nombre de tu club y del torneo. La app no envía el mensaje por ti. A partir de ese momento se aplica la política de WhatsApp. La eliminación en MCMN no borra mensajes, contactos o copias que otras personas hayan guardado fuera de la app.",
   },
   {
     title: "Proveedores y ubicación",
-    text: "Supabase presta la autenticación, base de datos y almacenamiento de escudos; este proyecto utiliza la región eu-west-1 (Irlanda). Netlify aloja la versión web y sus archivos públicos. EA recibe las consultas del servidor a su información pública de Clubes; la app no envía a EA contraseñas, teléfonos ni el ID de acceso de los capitanes. Estos proveedores pueden procesar datos técnicos, como direcciones IP y registros de acceso, según sus servicios. La distribución web y las operaciones de los proveedores pueden implicar tratamiento fuera de tu país; su documentación recoge las condiciones y salvaguardas aplicables. MCM no utiliza la base de datos de ConvoSquad.",
+    text: "Supabase presta la autenticación, base de datos y almacenamiento de escudos; este proyecto utiliza la región eu-west-1 (Irlanda). Netlify aloja la versión web y sus archivos públicos. EA recibe las consultas del servidor a su información pública de Clubes; la app no envía a EA contraseñas, teléfonos ni el ID de acceso de los capitanes. Estos proveedores pueden procesar datos técnicos, como direcciones IP y registros de acceso, según sus servicios. La distribución web y las operaciones de los proveedores pueden implicar tratamiento fuera de tu país; su documentación recoge las condiciones y salvaguardas aplicables. MCMN no utiliza la base de datos de ConvoSquad.",
   },
   {
     title: "Base del tratamiento",
@@ -51,7 +51,7 @@ export const privacySections = [
   },
   {
     title: "Registros técnicos, copias y dispositivo",
-    text: "La eliminación actúa sobre los datos activos de MCM y su autenticación. Los registros técnicos y copias de seguridad de los proveedores siguen sus ciclos de conservación y no se garantiza su desaparición inmediata. El limitador de acceso descarta ventanas de más de 24 horas al procesar nuevos intentos. Los escudos reemplazados se intentan retirar tras guardar y, si hay un fallo técnico, se vuelven a limpiar al guardar o eliminar el club o la cuenta. Los enlaces de visualización y las cachés pueden conservar temporalmente una copia. En web se conserva la sesión en el almacenamiento del navegador; en las apps nativas se utiliza el almacén seguro del dispositivo. Al cerrar sesión o completar la eliminación se retira la sesión local de ese dispositivo.",
+    text: "La eliminación actúa sobre los datos activos de MCMN y su autenticación. Los registros técnicos y copias de seguridad de los proveedores siguen sus ciclos de conservación y no se garantiza su desaparición inmediata. El limitador de acceso descarta ventanas de más de 24 horas al procesar nuevos intentos. Los escudos reemplazados se intentan retirar tras guardar y, si hay un fallo técnico, se vuelven a limpiar al guardar o eliminar el club o la cuenta. Los enlaces de visualización y las cachés pueden conservar temporalmente una copia. En web se conserva la sesión en el almacenamiento del navegador; en las apps nativas se utiliza el almacén seguro del dispositivo. Al cerrar sesión o completar la eliminación se retira la sesión local de ese dispositivo.",
   },
   {
     title: "Tus derechos",

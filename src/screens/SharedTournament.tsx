@@ -82,7 +82,7 @@ export function SharedTournament({
     <SafeAreaView style={s.page}>
       <Page
         title={info?.name || "Torneo relámpago"}
-        subtitle="MCM · Inscripción de clubes"
+        subtitle="MCMN · Inscripción de clubes"
       >
         <BrandLogo />
         {loading && <Text style={s.subtitle}>Cargando torneo…</Text>}

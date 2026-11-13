@@ -44,7 +44,7 @@ export function EaClubLink({ club }: { club: Club }) {
       ) : (
         <Text style={s.subtitle}>
           Vincula el club de EA para que la organización pueda recuperar los
-          resultados de sus cruces MCM.
+          resultados de sus cruces MCMN.
         </Text>
       )}
       {canEdit && (
@@ -71,7 +71,7 @@ export function EaClubLink({ club }: { club: Club }) {
         <Confirm
           label="Quitar vínculo EA"
           title="Quitar vínculo EA"
-          message="Se retirará la vinculación. Los resultados MCM se conservan. Si ya hay partidos importados, esta operación no estará disponible."
+          message="Se retirará la vinculación. Los resultados MCMN se conservan. Si ya hay partidos importados, esta operación no estará disponible."
           onConfirm={() => unlinkEaClub(club.id)}
         />
       )}

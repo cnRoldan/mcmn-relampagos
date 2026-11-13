@@ -295,7 +295,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
         p_club_id: clubId,
         p_offset: offset,
       });
-      if (error) throw new Error("No se pudo cargar el historial MCM.");
+      if (error) throw new Error("No se pudo cargar el historial MCMN.");
       return rows as EloEntry[];
     },
     mode: "cloud",

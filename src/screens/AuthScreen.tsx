@@ -19,7 +19,7 @@ export function AuthScreen() {
     <SafeAreaView style={s.page}>
       <Page
         title={signup ? "Cuenta de capitán" : "Acceso de capitanes"}
-        subtitle="Tu ID de EA. Tu club. Tu comunidad."
+        subtitle="MCMN · Mi cancha, mis normas"
       >
         <BrandLogo />
         {!configured && (
@@ -55,7 +55,7 @@ export function AuthScreen() {
           )}
           {signup && (
             <Text style={s.subtitle}>
-              Esta cuenta y su contraseña pertenecen a MCM. Tu ID de EA
+              Esta cuenta y su contraseña pertenecen a MCMN. Tu ID de EA
               identifica al capitán.
             </Text>
           )}

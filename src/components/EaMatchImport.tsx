@@ -112,7 +112,7 @@ export function EaMatchImport({
           {chosen && (
             <>
               <Check
-                label="Confirmo que este es el partido programado en MCM"
+                label="Confirmo que este es el partido programado en MCMN"
                 checked={confirmed}
                 onChange={setConfirmed}
               />
@@ -139,7 +139,7 @@ export function EaMatchImport({
                 </>
               )}
               <Button
-                label={busy ? "Importando…" : "Confirmar e importar a MCM"}
+                label={busy ? "Importando…" : "Confirmar e importar a MCMN"}
                 disabled={
                   busy ||
                   !confirmed ||
