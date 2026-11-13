@@ -4,7 +4,7 @@ Actualizado el 13 de noviembre de 2026.
 
 ## Proyecto y servicios
 
-- Repositorio creado: https://github.com/cnRoldan/mcmn-relampagos (público por decisión expresa del propietario; pendiente de confirmar la subida del código).
+- Repositorio creado: https://github.com/cnRoldan/mcmn-relampagos (público por decisión expresa del propietario; código e historial subidos a main).
 - Aplicación web: https://mcm-torneos-relampago.netlify.app
 - Netlify site ID: `1bd64a0f-cb74-4b51-b415-a82b6a31778a`.
 - Proyecto Supabase propio de MCMN: `mkbvplehrbjrufhkcqun`, eu-west-1. Está en la organización ConvoSquad, pero su base de datos es independiente.
@@ -53,3 +53,11 @@ El estado real de creación del entorno se comunica en la conversación de confi
 MCMN significa «Mi cancha, mis normas». Utilizar MCMN en la interfaz y documentación. Los nombres técnicos existentes (tablas, RPC, URL de Netlify y archivos gráficos originales) se mantienen para conservar compatibilidad.
 
 El propietario autorizó expresamente el repositorio público el 13 de noviembre de 2026. No cambiar su visibilidad por iniciativa propia. No incluir credenciales ni datos reales de participantes.
+
+## Configuración del entorno de Codex pendiente
+
+GitHub ya contiene el código y su historial en la rama `main`. GitHub Actions ha completado TypeScript y las 44 pruebas. La creación del entorno guardado de Codex requiere la interfaz de Codex: las herramientas de esta sesión solo permiten listar entornos y el controlador del navegador ha fallado al iniciarse. No se ha creado todavía un entorno MCMN.
+
+Crear un entorno llamado `mcmn-relampagos`, seleccionar `cnRoldan/mcmn-relampagos` y `main`, usar Node.js 24 y el comando de instalación `bash scripts/codex-setup.sh`. Ese script instala las dependencias y crea `.env` desde `.env.example` solo si no existe. El ejemplo contiene exclusivamente la URL y la clave **publicable** del cliente del proyecto MCMN; no hay claves de servicio. La autorización de datos sigue dependiendo de Auth y RLS. Las credenciales privadas de despliegue no se incluyen y deben gestionarse por las conexiones o secretos del entorno cuando sean necesarias.
+
+Tras guardar el entorno, seleccionarlo en Codex al crear tareas desde el móvil. Leer AGENTS.md y este documento para recuperar las decisiones del producto y las migraciones que siguen pendientes de desplegar.

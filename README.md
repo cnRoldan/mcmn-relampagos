@@ -119,3 +119,5 @@ El registro de ELO guarda antes/después, variación y versión `elo-v1-k32` par
 ## Desarrollo con Codex
 
 Repositorio público (visibilidad autorizada por el propietario): https://github.com/cnRoldan/mcmn-relampagos. Las reglas para nuevas tareas están en `AGENTS.md` y el estado pendiente de publicación en `docs/CONTINUIDAD.md`. Configurar el entorno con Node.js 24 y `bash scripts/codex-setup.sh`. GitHub Actions comprueba TypeScript y las pruebas en cada push a main y pull request. El flujo de comprobaciones no despliega cambios a producción.
+
+El instalador de Codex crea `.env` desde `.env.example` si no existe. El ejemplo incluye únicamente la conexión pública del cliente al proyecto MCMN; nunca una clave de servicio. El entorno guardado de Codex sigue pendiente de creación desde su interfaz.
