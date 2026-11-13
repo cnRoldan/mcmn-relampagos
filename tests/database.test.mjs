@@ -1479,3 +1479,281 @@ test("Club: edición de nombre y escudo conserva identidad, orden y permisos pri
     await db.close();
   }
 });
+
+test("EA y ELO: solo cruces MCM, validación, importación idempotente y corrección reversible", async () => {
+  const db = await setup();
+  try {
+    const { n, ids } = await competitionFixture(db, 4, "liga", "Elo");
+    const m = (await getGames(db, n))[0];
+    await db.query("update clubs set owner_id=$1 where id=$2", [a, m.home_id]);
+    await assert.rejects(
+      as(db, a, () =>
+        db.query(
+          "select public.set_ea_club_link($1,$2,'16306','common-gen5','fc27','Wabi Sabi')",
+          [a, m.home_id],
+        ),
+      ),
+      /permission denied/,
+    );
+    await assert.rejects(
+      db.query(
+        "select public.set_ea_club_link($1,$2,'16306','common-gen5','fc27','Wabi Sabi')",
+        [b, m.home_id],
+      ),
+      /propio club/,
+    );
+    await db.query(
+      "select public.set_ea_club_link($1,$2,'16306','common-gen5','fc27','Wabi Sabi')",
+      [a, m.home_id],
+    );
+    await db.query(
+      "select public.set_ea_club_link($1,$2,'999','common-gen5','fc27','Rival')",
+      [admin, m.away_id],
+    );
+    await assert.rejects(
+      db.query("select public.ea_match_context($1,$2)", [admin, m.id]),
+      /Falta validar/,
+    );
+    await assert.rejects(
+      db.query("select public.verify_ea_club_link($1,$2,1)", [a, m.home_id]),
+      /administradores/,
+    );
+    await db.query("select public.verify_ea_club_link($1,$2,1)", [
+      admin,
+      m.home_id,
+    ]);
+    await assert.rejects(
+      db.query("select public.verify_ea_club_link($1,$2,1)", [
+        admin,
+        m.home_id,
+      ]),
+      /ha cambiado/,
+    );
+    await assert.rejects(
+      db.query(
+        "select public.set_ea_club_link($1,$2,'16306','common-gen5','fc27','Duplicado')",
+        [admin, ids.find((id) => ![m.home_id, m.away_id].includes(id))],
+      ),
+      /unique/,
+    );
+    // Only this isolated fixture backdates verification, never real accounts.
+    await db.exec(
+      "update club_ea_links set verified_at='2020-01-01'::timestamptz",
+    );
+    let context = await one(db, "select public.ea_match_context($1,$2)", [
+      admin,
+      m.id,
+    ]);
+    const row = {
+      ea_match_id: "777",
+      played_at: "2020-01-02T00:00:00Z",
+      home_goals: 2,
+      away_goals: 1,
+      home_red: 1,
+      away_red: null,
+    };
+    await assert.rejects(
+      db.query("select public.cache_ea_match_candidates($1,$2,$3,$4)", [
+        admin,
+        m.id,
+        { ...context, version: 999 },
+        [row],
+      ]),
+      /han cambiado/,
+    );
+    await assert.rejects(
+      db.query("select public.cache_ea_match_candidates($1,$2,$3,$4)", [
+        admin,
+        m.id,
+        context,
+        [{ ...row, played_at: "2019-01-01T00:00:00Z" }],
+      ]),
+      /ventana/,
+    );
+    await db.query("select public.cache_ea_match_candidates($1,$2,$3,$4)", [
+      admin,
+      m.id,
+      context,
+      [row],
+    ]);
+    assert.equal(await one(db, "select count(*) from club_elo_history"), 0);
+    const cid = await one(
+      db,
+      "select id from ea_match_candidates where mcm_match_id=$1",
+      [m.id],
+    );
+    await assert.rejects(
+      as(db, a, () =>
+        db.query("select public.import_ea_match($1,$2,$3)", [
+          admin,
+          cid,
+          m.version,
+        ]),
+      ),
+      /permission denied/,
+    );
+    await assert.rejects(
+      db.query("select public.import_ea_match($1,$2,$3)", [a, cid, m.version]),
+      /administradores/,
+    );
+    await assert.rejects(
+      db.query("select public.import_ea_match($1,$2,$3)", [admin, cid, 999]),
+      /ha cambiado/,
+    );
+    await db.query("select public.import_ea_match($1,$2,$3)", [
+      admin,
+      cid,
+      m.version,
+    ]);
+    await db.query("select public.import_ea_match($1,$2,$3)", [
+      admin,
+      cid,
+      m.version,
+    ]);
+    let saved = (
+      await db.query("select * from competition_matches where id=$1", [m.id])
+    ).rows[0];
+    assert.equal(saved.ea_match_id, "777");
+    assert.equal(saved.ea_home_red, 1);
+    assert.equal(saved.ea_away_red, null);
+    const duplicate = await one(
+      db,
+      "insert into competition_matches(night_id,competition_id,phase,round_number,match_number,home_id,away_id) values($1,'duplicate-test','league',1,1,$2,$3) returning id",
+      [n, m.home_id, m.away_id],
+    );
+    const ctx2 = await one(db, "select public.ea_match_context($1,$2)", [
+      admin,
+      duplicate,
+    ]);
+    await db.query("select public.cache_ea_match_candidates($1,$2,$3,$4)", [
+      admin,
+      duplicate,
+      ctx2,
+      [row],
+    ]);
+    const cid2 = await one(
+      db,
+      "select id from ea_match_candidates where mcm_match_id=$1",
+      [duplicate],
+    );
+    await assert.rejects(
+      db.query("select public.import_ea_match($1,$2,0)", [admin, cid2]),
+      /otro encuentro MCM/,
+    );
+    assert.equal(await one(db, "select count(*) from club_elo_history"), 2);
+    assert.equal(
+      await one(db, "select rating from club_elo where club_id=$1", [
+        m.home_id,
+      ]),
+      1016,
+    );
+    assert.equal(
+      await one(db, "select rating from club_elo where club_id=$1", [
+        m.away_id,
+      ]),
+      984,
+    );
+    assert.equal(
+      await one(db, "select sum(rating) from club_elo"),
+      ids.length * 1000,
+    );
+    const history = await as(db, a, () =>
+      db.query("select * from mcm_club_history($1)", [m.home_id]),
+    );
+    assert.equal(history.rows[0].delta, 16);
+    assert.equal(history.rows[0].round_number, m.round_number);
+    assert.equal(history.rows[0].ea_match_id, "777");
+    assert.equal(history.rows[0].red_cards, 1);
+    await assert.rejects(saveScore(db, saved, 1, 2), /pendiente/);
+    await assert.rejects(
+      db.query("select public.set_ea_club_link($1,$2,null,null,null,null)", [
+        admin,
+        m.home_id,
+      ]),
+      /resultados importados/,
+    );
+    await saveScore(db, saved, null, null);
+    assert.equal(await one(db, "select count(*) from club_elo_history"), 0);
+    assert.equal(
+      await one(db, "select rating from club_elo where club_id=$1", [
+        m.home_id,
+      ]),
+      1000,
+    );
+    saved = (
+      await db.query("select * from competition_matches where id=$1", [m.id])
+    ).rows[0];
+    assert.equal(saved.ea_match_id, null);
+    await saveScore(db, saved, 0, 1);
+    assert.equal(
+      await one(db, "select rating from club_elo where club_id=$1", [
+        m.home_id,
+      ]),
+      984,
+    );
+    assert.equal(await one(db, "select count(*) from club_elo_history"), 2);
+    await db.query("update profiles set is_banned=true where id=$1", [a]);
+    assert.equal(
+      (
+        await as(db, a, () =>
+          db.query("select * from mcm_club_history($1)", [m.home_id]),
+        )
+      ).rows.length,
+      0,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("ELO: partidos externos no puntúan, empates, penaltis, reinicio y borrado conservan coherencia", async () => {
+  const db = await setup();
+  try {
+    const { n, ids, plan } = await competitionFixture(db, 4, "copa", "EloCopa");
+    const games = await getGames(db, n);
+    for (const m of games) await saveScore(db, m, 0, 0);
+    assert.equal(await one(db, "select count(*) from club_elo_history"), 12);
+    assert.equal(
+      await one(db, "select count(*) from club_elo where rating=1000"),
+      4,
+    );
+    await as(db, admin, () =>
+      db.query("select public.start_playoffs($1,$2,$3,$4)", [
+        n,
+        plan.id,
+        ids.slice(0, 2),
+        [],
+      ]),
+    );
+    const final = (await getGames(db, n)).find((m) => m.phase === "final");
+    await saveScore(db, final, 1, 1, 5, 4);
+    assert.equal(
+      await one(db, "select rating from club_elo where club_id=$1", [
+        final.home_id,
+      ]),
+      1016,
+    );
+    await as(db, admin, () =>
+      db.query("select public.reset_playoffs($1,$2)", [n, plan.id]),
+    );
+    assert.equal(await one(db, "select count(*) from club_elo_history"), 12);
+    assert.equal(
+      await one(db, "select count(*) from club_elo where rating=1000"),
+      4,
+    );
+    await db.query("update clubs set owner_id=$1 where id=$2", [a, ids[0]]);
+    await db.query(
+      "select public.set_ea_club_link($1,$2,'16306','common-gen5','fc27','Wabi Sabi')",
+      [a, ids[0]],
+    );
+    await db.query("select public.erase_owned_club($1)", [a]);
+    assert.equal(await one(db, "select count(*) from club_ea_links"), 0);
+    assert.equal(await one(db, "select count(*) from club_elo_history"), 12);
+    assert.equal(
+      await one(db, "select owner_id from clubs where id=$1", [ids[0]]),
+      null,
+    );
+  } finally {
+    await db.close();
+  }
+});

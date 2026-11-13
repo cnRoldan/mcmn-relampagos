@@ -96,6 +96,25 @@ function LocalProvider({ children }: { children: React.ReactNode }) {
           throw new Error("El torneo no está en curso.");
         return { ...n, endedAt: new Date().toISOString() };
       }),
+    lookupEaClub: async () => {
+      throw new Error("Conecta el servidor para consultar EA.");
+    },
+    linkEaClub: async () => {
+      throw new Error("Conecta el servidor.");
+    },
+    unlinkEaClub: async () => {
+      throw new Error("Conecta el servidor.");
+    },
+    verifyEaClub: async () => {
+      throw new Error("Conecta el servidor.");
+    },
+    findEaResults: async () => {
+      throw new Error("Conecta el servidor.");
+    },
+    importEaResult: async () => {
+      throw new Error("Conecta el servidor.");
+    },
+    clubHistory: async () => [],
     mode: "local",
     isAdmin: true,
     myClub: undefined,

@@ -6,6 +6,7 @@ import type { Club, Data, Night, Tournament } from "../domain/tournaments";
 import { emptyData } from "../domain/tournaments";
 import { useTournamentLink } from "../cloud/links";
 import { validateContacts } from "../domain/contacts";
+import type { EaLink, McmStats, EloEntry } from "../domain/ea";
 import type { Match } from "../domain/results";
 import { C, Context, Member } from "./context";
 type TournamentRow = {
@@ -67,10 +68,18 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
         supabase
           .from("competition_matches")
           .select(
-            "id,night_id,competition_id,phase,round_number,match_number,home_id,away_id,home_goals,away_goals,home_penalties,away_penalties,version",
+            "id,night_id,competition_id,phase,round_number,match_number,home_id,away_id,home_goals,away_goals,home_penalties,away_penalties,version,ea_match_id,ea_played_at,ea_home_red,ea_away_red",
           )
           .order("round_number")
           .order("match_number"),
+        supabase
+          .from("club_ea_links")
+          .select(
+            "club_id,edition,platform,ea_club_id,ea_name,verified_at,link_version",
+          ),
+        supabase
+          .from("club_elo")
+          .select("club_id,rating,played,won,drawn,lost,gf,ga"),
       ]);
       const failed = results.find((r) => r.error);
       if (failed?.error)
@@ -105,6 +114,12 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
         badgeUrl: c.badge_path ? badgeUrls.get(c.badge_path) || null : null,
         clubVersion: c.club_version ?? 0,
         contacts: contacts.get(c.id) || [],
+        eaLink: ((results[6].data || []) as EaLink[]).find(
+          (l) => l.club_id === c.id,
+        ),
+        mcmStats: ((results[7].data || []) as McmStats[]).find(
+          (l) => l.club_id === c.id,
+        ),
         captainId: c.owner_id,
       });
       const notices = new Map(
@@ -222,12 +237,67 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
       );
     }
   }
+  async function eaRequest(body: Record<string, unknown>, reload = false) {
+    const { data: result, error } = await supabase!.functions.invoke(
+      "ea-clubs",
+      { body },
+    );
+    if (error) {
+      let message = "No se pudo completar la operación de EA.";
+      try {
+        message = (await error.context.json()).error || message;
+      } catch {}
+      throw new Error(message);
+    }
+    if (reload)
+      try {
+        await refresh();
+      } catch {
+        throw new Error(
+          "La operación se guardó, pero no se pudo actualizar la pantalla. Pulsa Actualizar.",
+        );
+      }
+    return result;
+  }
   const active = data.nights.find((n) => n.id === data.activeId);
   function current() {
     if (!active) throw new Error("Selecciona un torneo.");
     return active.id;
   }
   const value: Context = {
+    lookupEaClub: async (input) =>
+      (await eaRequest({ action: "lookup", input })).club,
+    linkEaClub: async (clubId, input) => {
+      await eaRequest({ action: "link", club_id: clubId, input }, true);
+    },
+    unlinkEaClub: async (clubId) => {
+      await eaRequest({ action: "unlink", club_id: clubId }, true);
+    },
+    verifyEaClub: async (clubId, version) => {
+      await eaRequest({ action: "verify", club_id: clubId, version }, true);
+    },
+    findEaResults: (matchId) =>
+      eaRequest({ action: "candidates", match_id: matchId }),
+    importEaResult: async (match, candidateId, hp, ap) => {
+      await eaRequest(
+        {
+          action: "import",
+          candidate_id: candidateId,
+          version: match.version,
+          home_penalties: hp,
+          away_penalties: ap,
+        },
+        true,
+      );
+    },
+    clubHistory: async (clubId, offset) => {
+      const { data: rows, error } = await supabase!.rpc("mcm_club_history", {
+        p_club_id: clubId,
+        p_offset: offset,
+      });
+      if (error) throw new Error("No se pudo cargar el historial MCM.");
+      return rows as EloEntry[];
+    },
     mode: "cloud",
     isAdmin,
     myClub,

@@ -1,4 +1,4 @@
-export const privacyVersion = "2026-11-12";
+export const privacyVersion = "2026-11-13";
 // Responsible person confirmed by the owner; contact matches ConvoSquad's published notice.
 export const dataController: { name: string | null; email: string | null } = {
   name: "Claudio Roldán Ramos",
@@ -26,12 +26,16 @@ export const privacySections = [
     text: "Los miembros con acceso activo pueden consultar clubes, sus escudos, inscripciones y resultados de la comunidad. Los escudos se guardan en almacenamiento privado y se muestran mediante enlaces temporales. Los teléfonos los ven el capitán propietario, los administradores y los capitanes de clubes no excluidos que compartan un torneo no finalizado. Los motivos de exclusión solo son visibles para el capitán afectado y los administradores. El motivo del baneo se muestra a la cuenta afectada y los administradores. Un enlace público muestra nombre, fecha, horario, normas, estado y cantidad de inscritos; no teléfonos ni perfiles.",
   },
   {
+    title: "Vinculación y resultados de EA",
+    text: "Puedes vincular el identificador público de un club de EA, su nombre, edición y grupo de plataformas. La organización valida la correspondencia; no pedimos credenciales de EA ni verificamos la titularidad de esa cuenta. El servidor consulta información pública de EA y conserva únicamente los candidatos que coinciden con un cruce programado de MCM, su fecha, marcador y tarjetas rojas disponibles. No guardamos los nombres, identificadores ni estadísticas individuales de jugadores devueltos por EA. Un administrador confirma el partido antes de incorporarlo a clasificaciones, ELO e historial por jornada. El historial general de EA no puntúa en MCM. Las amarillas no se consideran verificadas y no generan penalizaciones. La consulta pública del nombre de un club puede almacenarse temporalmente como caché técnica, sin vincularlo a una cuenta MCM.",
+  },
+  {
     title: "WhatsApp",
     text: "Al tocar el botón de WhatsApp se abre un enlace wa.me con el teléfono del destinatario y un mensaje preparado que incluye el nombre de tu club y del torneo. La app no envía el mensaje por ti. A partir de ese momento se aplica la política de WhatsApp. La eliminación en MCM no borra mensajes, contactos o copias que otras personas hayan guardado fuera de la app.",
   },
   {
     title: "Proveedores y ubicación",
-    text: "Supabase presta la autenticación, base de datos y almacenamiento de escudos; este proyecto utiliza la región eu-west-1 (Irlanda). Netlify aloja la versión web y sus archivos públicos. Estos proveedores pueden procesar datos técnicos, como direcciones IP y registros de acceso, según sus servicios. La distribución web y las operaciones de los proveedores pueden implicar tratamiento fuera de tu país; su documentación recoge las condiciones y salvaguardas aplicables. MCM no utiliza la base de datos de ConvoSquad.",
+    text: "Supabase presta la autenticación, base de datos y almacenamiento de escudos; este proyecto utiliza la región eu-west-1 (Irlanda). Netlify aloja la versión web y sus archivos públicos. EA recibe las consultas del servidor a su información pública de Clubes; la app no envía a EA contraseñas, teléfonos ni el ID de acceso de los capitanes. Estos proveedores pueden procesar datos técnicos, como direcciones IP y registros de acceso, según sus servicios. La distribución web y las operaciones de los proveedores pueden implicar tratamiento fuera de tu país; su documentación recoge las condiciones y salvaguardas aplicables. MCM no utiliza la base de datos de ConvoSquad.",
   },
   {
     title: "Base del tratamiento",
@@ -39,7 +43,7 @@ export const privacySections = [
   },
   {
     title: "Conservación y eliminación del club",
-    text: "Los datos de cuenta y club se mantienen mientras los utilices. En Mi Club puedes eliminar el club: se borran sus teléfonos e imágenes guardadas, se retiran sus inscripciones en torneos no iniciados y se elimina su vínculo con el capitán. Si tiene historial deportivo se conserva un registro con un nombre genérico y un identificador técnico para no romper partidos, tablas y resultados. Si no tiene historial, se elimina el registro del club. La cuenta sigue disponible para crear otro club.",
+    text: "Los datos de cuenta y club se mantienen mientras los utilices. En Mi Club puedes eliminar el club: se borran sus teléfonos e imágenes guardadas, se retiran sus inscripciones en torneos no iniciados y se elimina su vínculo con el capitán y con el club público de EA, así como sus candidatos de importación. Si tiene historial deportivo se conserva un registro con un nombre genérico y un identificador técnico para no romper partidos, tablas, ELO y resultados. Los partidos confirmados conservan fecha, marcador, variación de ELO y, si se importaron, identificador técnico del partido EA y rojas reportadas. Ese identificador puede permitir relacionar el partido con información pública de EA; el registro no se presenta como completamente anónimo. Si no tiene historial, se elimina el registro del club. La cuenta sigue disponible para crear otro club.",
   },
   {
     title: "Eliminación de perfil y cuenta",
@@ -63,6 +67,7 @@ export const privacyLinks = [
     title: "Contacto de privacidad · convosquad.soporte@gmail.com",
     url: "mailto:convosquad.soporte@gmail.com?subject=Privacidad%20MCM",
   },
+  { title: "Privacidad de EA", url: "https://www.ea.com/legal/privacy-policy" },
   { title: "Privacidad de Supabase", url: "https://supabase.com/privacy" },
   { title: "Privacidad de Netlify", url: "https://www.netlify.com/privacy/" },
   {

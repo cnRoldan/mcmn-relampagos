@@ -1,8 +1,23 @@
+import type { EaClub, EaCandidate, EloEntry } from "../domain/ea";
 import type { BadgeInput } from "../domain/badges";
 import type { Match, Score } from "../domain/results";
 import { createContext } from "react";
 import type { Data, Night, Club, Tournament } from "../domain/tournaments";
 export type Context = {
+  lookupEaClub: (input: string) => Promise<EaClub>;
+  linkEaClub: (clubId: string, input: string) => Promise<void>;
+  unlinkEaClub: (clubId: string) => Promise<void>;
+  verifyEaClub: (clubId: string, version: number) => Promise<void>;
+  findEaResults: (
+    matchId: string,
+  ) => Promise<{ candidates: EaCandidate[]; note: string }>;
+  importEaResult: (
+    match: Match,
+    candidateId: string,
+    hp: number | null,
+    ap: number | null,
+  ) => Promise<void>;
+  clubHistory: (clubId: string, offset: number) => Promise<EloEntry[]>;
   mode: "local" | "cloud";
   isAdmin: boolean;
   myClub: Club | undefined;

@@ -21,6 +21,10 @@ export type Match = {
   home_penalties: number | null;
   away_penalties: number | null;
   version: number;
+  ea_match_id?: string | null;
+  ea_played_at?: string | null;
+  ea_home_red?: number | null;
+  ea_away_red?: number | null;
 };
 export type Score = {
   home: number | null;

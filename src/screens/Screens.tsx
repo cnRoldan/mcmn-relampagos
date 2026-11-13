@@ -21,6 +21,8 @@ import {
   currentTournament,
   tournamentState,
 } from "../domain/currentTournament";
+import { EaClubLink } from "../components/EaClubLink";
+import { McmClubHistory } from "../components/McmClubHistory";
 import { ClubBadge } from "../components/ClubBadge";
 import { pickBadge } from "../cloud/pickBadge";
 import type { BadgeSelection } from "../domain/badges";
@@ -173,7 +175,8 @@ export function Home() {
                 {club.id === myClub?.id && <Badge>TU CLUB</Badge>}
               </View>
               <Text style={s.subtitle}>
-                Inscripción #{club.registrationOrder ?? i + 1}
+                Inscripción #{club.registrationOrder ?? i + 1} · ELO{" "}
+                {Math.round(club.mcmStats?.rating ?? 1000)}
               </Text>
               {canContact && club.id !== myClub?.id && (
                 <WhatsAppContact
@@ -326,6 +329,10 @@ export function MyClub() {
               }}
             />
           </View>
+          <View style={s.card}>
+            <EaClubLink club={myClub} />
+          </View>
+          <McmClubHistory club={myClub} />
           <DeleteClub />
           {night ? (
             <View style={s.card}>

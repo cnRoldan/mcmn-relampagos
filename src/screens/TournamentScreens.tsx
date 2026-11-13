@@ -13,6 +13,7 @@ import {
   Sheet,
   Confirm,
 } from "../components/UI";
+import { EaClubLink } from "../components/EaClubLink";
 import { ClubBadge } from "../components/ClubBadge";
 import { CompetitionBoard } from "../components/CompetitionBoard";
 import { WhatsAppContact } from "../components/WhatsAppContact";
@@ -570,6 +571,7 @@ function TournamentRegistrations() {
               : ""}
           </Text>
           {c.excluded && c.exclusionReason && <Note>{c.exclusionReason}</Note>}
+          <EaClubLink club={c} />
           {(isAdmin ||
             n.clubs.some((own) => own.id === myClub?.id && !own.excluded)) &&
             c.id !== myClub?.id &&

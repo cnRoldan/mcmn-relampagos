@@ -1,9 +1,12 @@
+import type { EaLink, McmStats } from "./ea";
 import type { Match } from "./results";
 export type Size = 4 | 6 | 8;
 export type Club = {
   id: string;
   name: string;
   contacts: string[];
+  eaLink?: EaLink;
+  mcmStats?: McmStats;
   badgeUrl?: string | null;
   badgePath?: string | null;
   clubVersion?: number;

@@ -99,3 +99,23 @@ npx --yes netlify-cli deploy --prod --dir dist --no-build
 ## Alcance pendiente
 
 Reglas avanzadas de desempate, campeones y Palmarés, recuperación de cuentas, varios capitanes por club, notificaciones push y nuevas combinaciones de grupos. Las normas se fijan al crear el torneo; editar reglas tras abrir inscripciones requerirá versionar su aceptación.
+
+
+## EA y ELO MCM (primera versión)
+
+Mi Club permite comprobar un enlace público o ID de EA y solicitar su vinculación. Un administrador valida que representa al club de MCM. El pool `common-gen5` reúne PS5, Xbox Series y PC; se conserva junto al ID y la edición `fc27`, porque el ID por sí solo no identifica un club entre plataformas y ediciones. Un club EA solo puede vincularse a un club MCM en esa edición/pool. Cambiar el vínculo exige no tener importaciones activas; eliminar el club retira el vínculo personal y candidatos, conservando el resultado deportivo mínimo.
+
+En cada cruce programado, «Buscar resultado en EA» consulta desde el servidor los últimos diez `friendlyMatch` del club local. Filtra por ambos clubes, fecha posterior al inicio efectivo del torneo y a la validación de ambos vínculos, goles recíprocos y ausencia de abandono. Guarda solo esos candidatos saneados, sin jugadores ni el resto del historial EA. No consulta EA en cada refresco de pantalla ni importa en segundo plano. No hay paginación conocida: conviene revisar poco después del partido. Se pueden recuperar candidatos ya guardados en búsquedas anteriores mientras siga vigente su contexto.
+
+El administrador selecciona el candidato, revisa su fecha y confirma que corresponde a la jornada MCM. Coincidir por clubes y fecha es una ayuda, no una prueba automática. Una fuente EA no puede puntuar en dos encuentros MCM. Un capitán no puede importar ni validar su propio vínculo. Versiones de partido y vínculo impiden importar búsquedas que quedaron obsoletas. Los empates de eliminatoria requieren introducir la tanda manualmente; abandonos y ausencia de datos se resuelven mediante el registro administrativo. Para cambiar un marcador importado primero se deja pendiente, con las mismas restricciones de playoffs de los resultados manuales.
+
+La base es **1000 ELO**, **K=32** y expectativa `1/(1+10^((rival-propio)/400))`. Victoria=1, empate=0,5, derrota=0; en eliminatorias decide la tanda. Se computan todos los resultados oficiales confirmados en MCM, tanto importados como introducidos por administración. Ningún partido externo suma. Los goles se registran en estadísticas; rojas solo cuando EA las aporta (ausencia no significa cero). Las amarillas no tienen un campo validado. **No se han definido ni activado bonificaciones por goles, tarjetas o títulos.**
+
+El registro de ELO guarda antes/después, variación y versión `elo-v1-k32` para ambos clubes. Corregir, dejar pendiente o reiniciar eliminatorias reconstruye la secuencia cronológica de resultados; no duplica puntos. Se ordena por fecha EA o primera confirmación manual y UUID como desempate. Mi Club muestra total y un historial paginado de 50 partidos con torneo, jornada, rival y origen. La reconstrucción íntegra es adecuada para este volumen inicial; al crecer se deberá pasar a reconstrucción incremental desde el resultado modificado.
+
+`ea-clubs` valida el token con Auth en todas las acciones privadas. La consulta de metadatos públicos es accesible sin cuenta, con caché de diez minutos y límite de consultas externas. Solo el servicio escribe vínculos/candidatos; las RPC internas no están concedidas al cliente y vuelven a comprobar actor, rol y estado. El ELO y las tablas deportivas tienen RLS para miembros activos. El origen es un endpoint público no oficial de EA: puede cambiar o bloquear consultas. Los errores se muestran sin inventar resultados ni intentar eludir bloqueos.
+
+
+## Desarrollo con Codex
+
+Repositorio privado previsto (pendiente de creación): https://github.com/cnRoldan/mcm-relampagos. Las reglas para nuevas tareas están en `AGENTS.md` y el estado pendiente de publicación en `docs/CONTINUIDAD.md`. Configurar el entorno con Node.js 24 y `bash scripts/codex-setup.sh`. GitHub Actions comprueba TypeScript y las pruebas en cada push a main y pull request. El flujo de comprobaciones no despliega cambios a producción.

@@ -13,6 +13,7 @@ import {
 } from "../domain/results";
 import type { Match, Standing } from "../domain/results";
 import { useApp } from "../state/AppState";
+import { EaMatchImport } from "./EaMatchImport";
 import { ClubBadge } from "./ClubBadge";
 import { Button, Badge, Field, Note, Sheet, Confirm } from "./UI";
 import { colors, styles as s } from "../theme";
@@ -232,6 +233,13 @@ export function CompetitionBoard({
         )}
         {m.phase === "final" && winner && (
           <Badge>GANADOR · {name(winner)}</Badge>
+        )}
+        {(m.ea_match_id || (editable && !locked)) && (
+          <EaMatchImport
+            match={m}
+            home={name(m.home_id)}
+            away={name(m.away_id)}
+          />
         )}
         {editable && !locked && (
           <Button

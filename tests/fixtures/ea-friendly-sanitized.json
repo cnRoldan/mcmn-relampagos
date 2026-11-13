@@ -1,0 +1,262 @@
+[
+  {
+    "matchId": "187224813410049",
+    "timestamp": 1794525580,
+    "clubs": {
+      "16306": {
+        "goals": "0",
+        "goalsAgainst": "1",
+        "result": "0",
+        "winnerByDnf": "0"
+      },
+      "18971": {
+        "goals": "1",
+        "goalsAgainst": "0",
+        "result": "0",
+        "winnerByDnf": "0"
+      }
+    },
+    "aggregate": {
+      "18971": {
+        "redcards": 0
+      },
+      "16306": {
+        "redcards": 0
+      }
+    }
+  },
+  {
+    "matchId": "187194642830428",
+    "timestamp": 1794524277,
+    "clubs": {
+      "16306": {
+        "goals": "1",
+        "goalsAgainst": "0",
+        "result": "0",
+        "winnerByDnf": "0"
+      },
+      "46499": {
+        "goals": "0",
+        "goalsAgainst": "1",
+        "result": "0",
+        "winnerByDnf": "0"
+      }
+    },
+    "aggregate": {
+      "46499": {
+        "redcards": 0
+      },
+      "16306": {
+        "redcards": 0
+      }
+    }
+  },
+  {
+    "matchId": "187154574150345",
+    "timestamp": 1794522177,
+    "clubs": {
+      "16306": {
+        "goals": "2",
+        "goalsAgainst": "1",
+        "result": "0",
+        "winnerByDnf": "0"
+      },
+      "17860": {
+        "goals": "1",
+        "goalsAgainst": "2",
+        "result": "0",
+        "winnerByDnf": "0"
+      }
+    },
+    "aggregate": {
+      "17860": {
+        "redcards": 0
+      },
+      "16306": {
+        "redcards": 0
+      }
+    }
+  },
+  {
+    "matchId": "187230340760384",
+    "timestamp": 1794520877,
+    "clubs": {
+      "16306": {
+        "goals": "3",
+        "goalsAgainst": "0",
+        "result": "0",
+        "winnerByDnf": "0"
+      },
+      "19631": {
+        "goals": "0",
+        "goalsAgainst": "3",
+        "result": "0",
+        "winnerByDnf": "0"
+      }
+    },
+    "aggregate": {
+      "19631": {
+        "redcards": 0
+      },
+      "16306": {
+        "redcards": 0
+      }
+    }
+  },
+  {
+    "matchId": "187230235180500",
+    "timestamp": 1794519681,
+    "clubs": {
+      "5360": {
+        "goals": "0",
+        "goalsAgainst": "1",
+        "result": "0",
+        "winnerByDnf": "0"
+      },
+      "16306": {
+        "goals": "1",
+        "goalsAgainst": "0",
+        "result": "0",
+        "winnerByDnf": "0"
+      }
+    },
+    "aggregate": {
+      "5360": {
+        "redcards": 0
+      },
+      "16306": {
+        "redcards": 0
+      }
+    }
+  },
+  {
+    "matchId": "187058404840385",
+    "timestamp": 1794518476,
+    "clubs": {
+      "16306": {
+        "goals": "3",
+        "goalsAgainst": "0",
+        "result": "0",
+        "winnerByDnf": "0"
+      },
+      "29318": {
+        "goals": "0",
+        "goalsAgainst": "3",
+        "result": "0",
+        "winnerByDnf": "0"
+      }
+    },
+    "aggregate": {
+      "29318": {
+        "redcards": 0
+      },
+      "16306": {
+        "redcards": 0
+      }
+    }
+  },
+  {
+    "matchId": "184640959210483",
+    "timestamp": 1794437468,
+    "clubs": {
+      "16306": {
+        "goals": "0",
+        "goalsAgainst": "1",
+        "result": "0",
+        "winnerByDnf": "0"
+      },
+      "61747": {
+        "goals": "1",
+        "goalsAgainst": "0",
+        "result": "0",
+        "winnerByDnf": "0"
+      }
+    },
+    "aggregate": {
+      "16306": {
+        "redcards": 0
+      },
+      "61747": {
+        "redcards": 0
+      }
+    }
+  },
+  {
+    "matchId": "184616825310232",
+    "timestamp": 1794435690,
+    "clubs": {
+      "1106": {
+        "goals": "2",
+        "goalsAgainst": "0",
+        "result": "0",
+        "winnerByDnf": "0"
+      },
+      "16306": {
+        "goals": "0",
+        "goalsAgainst": "2",
+        "result": "0",
+        "winnerByDnf": "0"
+      }
+    },
+    "aggregate": {
+      "1106": {
+        "redcards": 0
+      },
+      "16306": {
+        "redcards": 0
+      }
+    }
+  },
+  {
+    "matchId": "184860355720080",
+    "timestamp": 1794434428,
+    "clubs": {
+      "16306": {
+        "goals": "0",
+        "goalsAgainst": "3",
+        "result": "0",
+        "winnerByDnf": "0"
+      },
+      "278947": {
+        "goals": "3",
+        "goalsAgainst": "0",
+        "result": "0",
+        "winnerByDnf": "0"
+      }
+    },
+    "aggregate": {
+      "16306": {
+        "redcards": 0
+      },
+      "278947": {
+        "redcards": 0
+      }
+    }
+  },
+  {
+    "matchId": "184662520690496",
+    "timestamp": 1794433032,
+    "clubs": {
+      "16306": {
+        "goals": "3",
+        "goalsAgainst": "2",
+        "result": "0",
+        "winnerByDnf": "0"
+      },
+      "86914": {
+        "goals": "2",
+        "goalsAgainst": "3",
+        "result": "0",
+        "winnerByDnf": "0"
+      }
+    },
+    "aggregate": {
+      "16306": {
+        "redcards": 0
+      },
+      "86914": {
+        "redcards": 0
+      }
+    }
+  }
+]
